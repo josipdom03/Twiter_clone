@@ -1,6 +1,7 @@
 {
   "name": "twitter-clone-api",
   "version": "1.0.0",
+  "type": "module",
   "description": "REST API for Twitter Clone",
   "main": "src/server.js",
   "scripts": {

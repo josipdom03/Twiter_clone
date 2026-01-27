@@ -1,0 +1,16 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+import './index.css'; // Tailwind CSS
+
+// Ovdje možeš inicijalizirati RootStore ako želiš koristiti Context
+// Za jednostavnost, u ovom primjeru store-ove uvozimo direktno u komponente
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);

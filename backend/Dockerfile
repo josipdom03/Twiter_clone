@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 3000
 
 # Pokreni aplikaciju
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # MySQL Baza podataka
   db:
     image: mysql:8.0
     container_name: twitter_db
@@ -14,10 +13,10 @@ services:
     volumes:
       - db_data:/var/lib/mysql
 
-  # Backend API
   backend:
     build: ./backend
     container_name: twitter_api
+    restart: on-failure # Ako se baza ne digne odmah, backend će se restartati
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -26,21 +25,25 @@ services:
     environment:
       - DB_HOST=db
       - DB_USER=root
-      - DB_PASS=rootpassword
+      - DB_PASSWORD=rootpassword # Promijenjeno da odgovara configu
       - DB_NAME=twitter_db
+      - PORT=3000
     depends_on:
       - db
 
-  # WebSocket Server
   websocket:
     build: ./websocket
     container_name: twitter_ws
+    volumes:
+      - ./websocket:/app
+      - /app/node_modules
     ports:
       - "4000:4000"
+    environment:
+      - BACKEND_URL=http://backend:3000 # Za komunikaciju unutar dockera
     depends_on:
       - backend
 
-  # Frontend React
   frontend:
     build: ./frontend
     container_name: twitter_ui
@@ -48,8 +51,6 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:3000
-    depends_on:
-      - backend
-
+  
 volumes:
   db_data:

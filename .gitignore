@@ -1,0 +1,37 @@
+# --- Node.js / Dependencije ---
+**/node_modules/
+**/npm-debug.log*
+**/yarn-error.log*
+
+# --- Environment varijable (OBAVEZNO!) ---
+# Ignoriramo sve .env datoteke jer sadrže lozinke za bazu i API ključeve
+.env
+**/ .env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+
+# --- Build / Distribucija ---
+**/dist/
+**/build/
+**/out/
+
+# --- Docker ---
+# Ako koristiš lokalne podatke za bazu izvan kontejnera
+**/db_data/
+
+# --- OS specifične datoteke ---
+.DS_Store
+Thumbs.db
+
+# --- IDE specifične datoteke ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Logovi ---
+logs
+*.log
+**/logs/
