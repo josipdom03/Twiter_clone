@@ -2,6 +2,8 @@ import express from 'express';
 import sequelize from './config/database.js';
 import './models/index.js'; 
 
+import authRoutes from './routes/authRoutes.js';
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
