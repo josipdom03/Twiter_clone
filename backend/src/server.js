@@ -1,16 +1,47 @@
 import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
 import sequelize from './config/database.js';
+
 import './models/index.js'; 
 
+// Uvoz ruta
 import authRoutes from './routes/authRoutes.js';
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+dotenv.config();
 
+const app = express();
+
+// --- MIDDLEWARES ---
+
+app.use(cors({
+  origin: 'http://localhost:5173', // Adresa tvog Vite frontenda
+  credentials: true
+}));
+
+
+app.use(express.json());
+
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
+// --- RUTE ---
+
+app.use('/api/auth', authRoutes);
+
+app.get('/', (req, res) => {
+  res.send('Twitter Clone API is running...');
+});
+
+// --- SERVER START & DB SYNC ---
+
+const PORT = process.env.PORT || 3000;
 
 sequelize.sync({ alter: true })
   .then(() => {
-    console.log(' Tablice su sinkronizirane.');
+    console.log('MySQL tablice su sinkronizirane.');
     app.listen(PORT, () => {
       console.log(`Server radi na portu ${PORT}`);
     });
