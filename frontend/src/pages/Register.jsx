@@ -1,6 +1,6 @@
 import React, { useState } from 'react'; // Dodaj useState
 import { observer } from "mobx-react-lite";
-import { authStore } from "../stores/AuthStore.js";
+import { authStore } from "../stores/AuthStore.jsx";
 
 const Register = observer(() => {
   // Stanje za input polja

@@ -1,52 +1,40 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+export const validateRegister = (req, res, next) => {
+  try {
+    const { username, email, password } = req.body;
 
-const VerifyEmail = () => {
-  const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState('verifying'); // verifying, success, error
-  const [message, setMessage] = useState('Provjeravamo vašu prijavu...');
-  const token = searchParams.get('token');
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const confirmEmail = async () => {
-      try {
-        // Pozivamo BACKEND rutu koju smo ranije definirali
-        const response = await axios.get(`http://localhost:3000/api/auth/verify-email?token=${token}`);
-        setStatus('success');
-        setMessage(response.data.message);
-        // Automatski preusmjeri na login nakon 3 sekunde
-        setTimeout(() => navigate('/login'), 3000);
-      } catch (err) {
-        setStatus('error');
-        setMessage(err.response?.data?.message || 'Neispravan ili istekao token.');
-      }
-    };
-
-    if (token) {
-      confirmEmail();
+    // 1. Provjera postoje li podaci u tijelu zahtjeva
+    if (!username || !email || !password) {
+      return res.status(400).json({ 
+        message: "Sva polja su obavezna: korisničko ime, email i lozinka." 
+      });
     }
-  }, [token, navigate]);
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
-      <div className="bg-gray-900 p-8 rounded-2xl border border-gray-800 text-center max-w-md w-full">
-        {status === 'verifying' && <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>}
-        {status === 'success' && <span className="text-4xl mb-4 block">✅</span>}
-        {status === 'error' && <span className="text-4xl mb-4 block">❌</span>}
-        
-        <h2 className="text-2xl font-bold mb-2">Potvrda računa</h2>
-        <p className={`${status === 'error' ? 'text-red-400' : 'text-gray-400'}`}>
-          {message}
-        </p>
-        
-        {status === 'success' && (
-          <p className="mt-4 text-sm text-gray-500">Preusmjeravanje na prijavu...</p>
-        )}
-      </div>
-    </div>
-  );
+    // 2. Provjera formata emaila (Regex)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: "Unesena email adresa nije ispravnog formata." 
+      });
+    }
+
+    // 3. Provjera minimalne duljine lozinke
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        message: "Lozinka mora imati barem 6 znakova." 
+      });
+    }
+
+    // 4. Provjera minimalne duljine korisničkog imena
+    if (username.length < 3) {
+      return res.status(400).json({ 
+        message: "Korisničko ime mora imati barem 3 znaka." 
+      });
+    }
+
+    // Ako je sve prošlo, šalji dalje na controller
+    next();
+  } catch (error) {
+    console.error("Greška u validaciji:", error);
+    return res.status(500).json({ message: "Greška na serveru prilikom validacije." });
+  }
 };
-
-export default VerifyEmail;

@@ -1,13 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
-import { authStore } from './stores/AuthStore'; // Pazi na export (vjerojatno je imenovan)
+import { authStore } from './stores/AuthStore';
 
 // Pages
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
-import Register from './pages/Register'; // Dodaj ovo
-import VerifyEmail from './pages/VerifyEmail'; // Dodaj ovo
+import Register from './pages/Register'; 
+import VerifyEmail from './pages/VerifyEmail'; 
 import Notifications from './pages/Notifications';
 
 // Components
