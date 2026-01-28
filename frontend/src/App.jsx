@@ -1,11 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
-import authStore from './stores/AuthStore';
+import { authStore } from './stores/AuthStore'; // Pazi na export (vjerojatno je imenovan)
 
 // Pages
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
+import Register from './pages/Register'; // Dodaj ovo
+import VerifyEmail from './pages/VerifyEmail'; // Dodaj ovo
 import Notifications from './pages/Notifications';
 
 // Components
@@ -29,19 +31,26 @@ const App = observer(() => {
         {/* Main Content Area */}
         <main className="flex-grow max-w-[600px] border-x border-gray-800 min-h-screen">
           <Routes>
-            <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
+            {/* Javne rute (dostupne samo ako NISI ulogiran) */}
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
-            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
             
-            {/* Dinamička ruta za profile (tvoj :moj-username i :neki-username) */}
-            <Route path="/:username" element={<Profile />} />
+            {/* Ruta za verifikaciju emaila - javna jer korisnik klikne iz maila */}
+            <Route path="/verify-email" element={<VerifyEmail />} />
+
+            {/* Zaštićene rute (dostupne samo ako SI ulogiran) */}
+            <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
+            <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" />} />
             
-            {/* Fallback na home */}
+            {/* Dinamička ruta za profile */}
+            <Route path="/:username" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+            
+            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
 
-        {/* Right Panel - Trendovi i pretraga (samo za desktop) */}
+        {/* Right Panel - Trendovi i pretraga */}
         {isAuthenticated && (
           <div className="hidden lg:block w-80 ml-8 sticky top-0 h-screen">
             <RightPanel />

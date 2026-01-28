@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
@@ -16,41 +14,33 @@ services:
   backend:
     build: ./backend
     container_name: twitter_api
-    restart: on-failure # Ako se baza ne digne odmah, backend će se restartati
+    restart: on-failure
     volumes:
       - ./backend:/app
       - /app/node_modules
     ports:
       - "3000:3000"
+    env_file:
+      - ./backend/.env  # Ovo automatski učitava tvoj Mailtrap i DB podatke
     environment:
       - DB_HOST=db
       - DB_USER=root
-      - DB_PASSWORD=rootpassword # Promijenjeno da odgovara configu
+      - DB_PASSWORD=rootpassword
       - DB_NAME=twitter_db
       - PORT=3000
     depends_on:
       - db
-
-  websocket:
-    build: ./websocket
-    container_name: twitter_ws
-    volumes:
-      - ./websocket:/app
-      - /app/node_modules
-    ports:
-      - "4000:4000"
-    environment:
-      - BACKEND_URL=http://backend:3000 # Za komunikaciju unutar dockera
-    depends_on:
-      - backend
 
   frontend:
     build: ./frontend
     container_name: twitter_ui
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:3000
-  
+
 volumes:
   db_data:
