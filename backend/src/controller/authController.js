@@ -86,9 +86,9 @@ export const login = async (req, res) => {
     }
 
     // 2. Provjeri je li verificiran
-    if (!user.isVerified) {
-      return res.status(401).json({ message: "Molimo prvo potvrdite svoj email." });
-    }
+    if (!user.isVerified) { 
+  return res.status(401).json({ message: "Molimo prvo potvrdite svoj email." });
+}
 
     // 3. Provjeri lozinku
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
