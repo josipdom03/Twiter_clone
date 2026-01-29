@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../stores/AuthStore';
 import { useNavigate, Link } from 'react-router-dom';
-import '../styles/auth.css'; 
-
+import '../styles/auth.css'; // Uvozimo zajednički CSS
 
 const Login = observer(() => {
   const [email, setEmail] = useState('');
@@ -11,29 +10,46 @@ const Login = observer(() => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:3000/api/auth/google";
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     try {
       await authStore.login(email, password);
-      navigate('/'); // Vodi na početnu nakon uspješne prijave
+      navigate('/'); 
     } catch (err) {
-      setError(err);
+      // Hvatanje poruke o grešci s backend-a ako postoji
+      setError(err.response?.data?.message || 'Pogrešan email ili lozinka');
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
-      <div className="max-w-md w-full bg-gray-900 p-8 rounded-2xl border border-gray-800">
-        <h2 className="text-3xl font-bold mb-6 text-center">Prijava</h2>
+    /* Roditeljski kontejner za centriranje */
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Prijavi se na 𝕏 klon</h2>
         
-        {error && <p className="bg-red-500/20 text-red-400 p-3 rounded-lg mb-4 text-sm border border-red-500/50">{error}</p>}
+        {/* Google Login Button */}
+        <button className="google-btn" onClick={handleGoogleLogin}>
+          <img 
+            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" 
+            alt="Google" 
+            style={{ width: '20px', height: '20px' }} 
+          />
+          Prijavi se putem Googlea
+        </button>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <div className="separator">
+          <span>ili</span>
+        </div>
+
+        <form onSubmit={handleLogin}>
           <input
             type="email"
-            placeholder="Email"
-            className="w-full p-3 rounded-lg bg-black border border-gray-700 focus:border-blue-500 outline-none"
+            placeholder="Email adresa"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -41,22 +57,25 @@ const Login = observer(() => {
           <input
             type="password"
             placeholder="Lozinka"
-            className="w-full p-3 rounded-lg bg-black border border-gray-700 focus:border-blue-500 outline-none"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <button
-            type="submit"
+          
+          <button 
+            type="submit" 
+            className="btn-primary" 
             disabled={authStore.isLoading}
-            className="w-full bg-blue-500 hover:bg-blue-600 py-3 rounded-full font-bold transition disabled:opacity-50"
           >
             {authStore.isLoading ? 'Prijava...' : 'Prijavi se'}
           </button>
         </form>
+
+        {/* Prikaz greške */}
+        {error && <p className="error-text">{error}</p>}
         
-        <p className="mt-6 text-center text-gray-500 text-sm">
-          Nemaš račun? <Link to="/register" className="text-blue-400 hover:underline">Registriraj se</Link>
+        <p className="hint">
+          Nemaš račun? <Link to="/register" style={{ color: '#1d9bf0', textDecoration: 'none', fontWeight: 'bold' }}>Registriraj se</Link>
         </p>
       </div>
     </div>

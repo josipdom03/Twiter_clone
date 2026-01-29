@@ -7,6 +7,7 @@ import './models/index.js';
 
 // Uvoz ruta
 import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use((req, res, next) => {
 // --- RUTE ---
 
 app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
 
 app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');
