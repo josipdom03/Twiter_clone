@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 // --- RUTE ---
 
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');

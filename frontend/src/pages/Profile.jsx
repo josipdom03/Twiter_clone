@@ -1,49 +1,115 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../stores/AuthStore';
+import { userStore } from '../stores/UserStore.jsx'; 
+import '../styles/profile.css';
 
 const Profile = observer(() => {
-  // Ako korisnik nije prijavljen
-  if (!authStore.isAuthenticated) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [formData, setFormData] = useState({ username: '', bio: '' });
+    const [selectedFile, setSelectedFile] = useState(null); // Za datoteku
+    const [previewUrl, setPreviewUrl] = useState(null);    // Za prikaz prije spremanja
+
+    useEffect(() => {
+        userStore.fetchProfile();
+    }, []);
+
+    useEffect(() => {
+        if (userStore.profile) {
+            setFormData({
+                username: userStore.profile.username || '',
+                bio: userStore.profile.bio || ''
+            });
+            setPreviewUrl(userStore.profile.avatar);
+        }
+    }, [userStore.profile]);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file)); // Instantni prikaz slike
+        }
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            // Kreiramo FormData jer šaljemo datoteku
+            const data = new FormData();
+            data.append('username', formData.username);
+            data.append('bio', formData.bio);
+            if (selectedFile) {
+                data.append('avatar', selectedFile);
+            }
+
+            await userStore.updateProfile(data); // UserStore mora primati FormData
+            setIsEditing(false);
+        } catch (err) {
+            alert(err);
+        }
+    };
+
+    if (userStore.isLoading && !userStore.profile) return <div className="loader">Učitavanje...</div>;
+
+    const p = userStore.profile;
+
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black text-white">
-        <p className="text-xl text-gray-400">Morate biti prijavljeni da biste vidjeli profil.</p>
-      </div>
-    );
-  }
+        <div className="profile-container">
+            <div className="profile-card">
+                <div className="profile-banner"></div>
+                <div className="profile-content">
+                    <div className="profile-avatar-wrapper">
+                        <img src={previewUrl} alt="Avatar" className="profile-avatar" />
+                    </div>
+                    
+                    <div className="profile-actions">
+                        {!isEditing ? (
+                            <button className="edit-btn" onClick={() => setIsEditing(true)}>Uredi profil</button>
+                        ) : (
+                            <div className="edit-buttons-gap">
+                                <button className="cancel-btn" onClick={() => setIsEditing(false)}>Odustani</button>
+                                <button className="save-btn" onClick={handleUpdate}>Spremi</button>
+                            </div>
+                        )}
+                    </div>
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
-      <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-        {/* Banner */}
-        <div className="h-32 bg-blue-500"></div>
-        
-        {/* Profile Info */}
-        <div className="p-6 relative">
-          <div className="absolute -top-12 left-6 h-24 w-24 bg-gray-700 border-4 border-black rounded-full flex items-center justify-center text-3xl">
-            👤
-          </div>
-          
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold">{authStore.user?.username || "Korisnik"}</h2>
-            <p className="text-gray-500">@{authStore.user?.username?.toLowerCase() || "user"}</p>
-            
-            <div className="mt-4 py-3 border-t border-gray-800">
-              <p className="text-sm text-gray-400">Email adresa</p>
-              <p className="text-white">{authStore.user?.email || "nema@emaila.com"}</p>
+                    <div className="profile-info">
+                        {!isEditing ? (
+                            <div className="view-mode">
+                                <h2>{p?.username}</h2>
+                                <p className="handle">@{p?.username?.toLowerCase()}</p>
+                                <p className="bio">{p?.bio || "Nema biografije."}</p>
+                            </div>
+                        ) : (
+                            <form className="edit-form">
+                                <div className="input-group">
+                                    <label>Promijeni profilnu sliku</label>
+                                    <input type="file" accept="image/*" onChange={handleFileChange} />
+                                </div>
+                                <div className="input-group">
+                                    <label>Korisničko ime</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.username} 
+                                        onChange={e => setFormData({...formData, username: e.target.value})} 
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label>Biografija</label>
+                                    <textarea 
+                                        value={formData.bio} 
+                                        onChange={e => setFormData({...formData, bio: e.target.value})} 
+                                    />
+                                </div>
+                            </form>
+                        )}
+                        <button className="logout-link" onClick={() => authStore.logout()}>Odjavi se</button>
+                    </div>
+                </div>
             </div>
-
-            <button 
-              onClick={() => authStore.logout()}
-              className="mt-6 w-full bg-white text-black font-bold py-2 rounded-full hover:bg-gray-200 transition"
-            >
-              Odjavi se
-            </button> 
-          </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 });
 
 export default Profile;

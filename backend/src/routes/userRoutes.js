@@ -1,12 +1,13 @@
 import express from 'express';
-import { getProfile, updateProfile } from '../controller/userController.js';
+import { getProfile, updateProfile, upload } from '../controller/userController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+
 const router = express.Router();
 
-// Ruta: GET /api/users/profile
+// Dohvaćanje profila
 router.get('/profile', authMiddleware, getProfile);
 
-// Ruta: PUT /api/users/profile (za ažuriranje)
-router.put('/profile', authMiddleware, updateProfile);
+// Ažuriranje profila - dodan upload middleware
+router.put('/profile', authMiddleware, upload.single('avatar'), updateProfile);
 
 export default router;
