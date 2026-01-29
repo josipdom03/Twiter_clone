@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../stores/AuthStore';
 import { useNavigate, Link } from 'react-router-dom';
+import '../styles/auth.css'; 
+
 
 const Login = observer(() => {
   const [email, setEmail] = useState('');

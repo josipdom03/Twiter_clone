@@ -1,0 +1,130 @@
+/* Resetiranje margina kako bi centriranje bilo 100% točno */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff; /* Svijetla pozadina */
+}
+
+/* Glavni kontejner koji VRŠI centriranje */
+.auth-container {
+    display: flex !important; /* Forsiramo flexbox */
+    justify-content: center !important; /* Horizontalno centriranje */
+    align-items: center !important;     /* Vertikalno centriranje */
+    width: 100%;
+    min-height: 100vh; /* Zauzima cijelu visinu ekrana */
+    background-color: #ffffff;
+    color: #0f1419; /* Tamni tekst */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.auth-card h2 {
+    font-size: 31px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #0f1419;
+}
+
+/* Google Button - sada sa sivim rubom za svijetlu temu */
+.google-btn {
+    background-color: #ffffff;
+    color: #0f1419;
+    border: 1px solid #cfd9de;
+    border-radius: 9999px;
+    padding: 12px 20px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    transition: background-color 0.2s;
+}
+
+.google-btn:hover {
+    background-color: #f7f7f7;
+}
+
+/* Separator */
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: #536471;
+}
+
+.separator::before, .separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #eff3f4;
+}
+
+.separator span {
+    padding: 0 10px;
+}
+
+/* Form & Inputs */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+input {
+    background-color: #ffffff;
+    border: 1px solid #cfd9de;
+    border-radius: 4px;
+    padding: 16px;
+    color: #0f1419;
+    font-size: 17px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+input:focus {
+    outline: none;
+    border: 2px solid #1d9bf0; /* Plavi rub pri kliku */
+    padding: 15px; /* Smanjujemo padding za 1px jer je border deblji */
+}
+
+/* Plavi gumb */
+button[type="submit"] {
+    background-color: #1d9bf0;
+    color: #ffffff;
+    border: none;
+    border-radius: 9999px;
+    padding: 14px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+button[type="submit"]:hover {
+    background-color: #1a8cd8;
+}
+
+.hint {
+    color: #536471;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 25px;
+}
