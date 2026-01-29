@@ -1,36 +1,46 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../stores/AuthStore';
+import '../styles/home.css';
 
 const Home = observer(() => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
-      <div className="max-w-2xl w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
-        <h1 className="text-4xl font-bold mb-4 text-blue-400">Dobrodošli na Twitter Klon 🐦</h1>
-        
-        {authStore.isAuthenticated ? (
-          <div className="space-y-4">
-            <p className="text-xl">Prijavljeni ste kao: <span className="font-mono text-green-400">{authStore.user?.username || 'Korisnik'}</span></p>
-            <button 
-              onClick={() => authStore.logout()}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold transition"
-            >
-              Odjavi se
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-gray-400 text-lg">Trenutno niste prijavljeni.</p>
-            <div className="flex gap-4 justify-center">
-              <a href="/login" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-full font-bold transition">
-                Prijavi se
-              </a>
-              <a href="/register" className="border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-6 py-2 rounded-full font-bold transition">
-                Registriraj se
-              </a>
+    <div className="home-main-wrapper">
+      <header className="home-header">
+        <h2 className="header-title">Početna</h2>
+      </header>
+
+      <div className="home-content">
+        <div className="welcome-card">
+          <h1 className="welcome-title">Dobrodošli na 𝕏 klon</h1>
+          
+          {authStore.isAuthenticated ? (
+            <div className="user-logged-in">
+              <p className="status-text">
+                Prijavljeni ste kao: <span className="highlight-user">@{authStore.user?.username}</span>
+              </p>
+              <button 
+                onClick={() => authStore.logout()}
+                className="logout-btn"
+              >
+                Odjavi se
+              </button>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="user-logged-out">
+              <p className="hint-text">Pridruži se razgovoru i saznaj što se događa.</p>
+              <div className="auth-actions">
+                <a href="/login" className="login-link">Prijavi se</a>
+                <a href="/register" className="register-link">Registriraj se</a>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Ovdje će kasnije ići tvoj Feed s tweetovima */}
+        <div className="feed-placeholder">
+           <p>Ovdje će se pojaviti tvoje objave...</p>
+        </div>
       </div>
     </div>
   );

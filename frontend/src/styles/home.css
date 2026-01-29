@@ -1,0 +1,98 @@
+/* home.css */
+
+.home-main-wrapper {
+    margin-left: 260px; /* KLJUČNO: Ostavlja prostor za tvoj Sidebar */
+    min-height: 100vh;
+    background-color: #ffffff;
+    border-right: 1px solid #eff3f4;
+    max-width: 600px; /* Ograničavamo širinu feeda kao na X-u */
+}
+
+.home-header {
+    height: 53px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    border-bottom: 1px solid #eff3f4;
+}
+
+.header-title {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0;
+    color: #0f1419;
+}
+
+.home-content {
+    padding: 20px;
+}
+
+.welcome-card {
+    padding: 40px 20px;
+    text-align: center;
+    border-bottom: 1px solid #eff3f4;
+}
+
+.welcome-title {
+    font-size: 31px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.status-text {
+    font-size: 17px;
+    color: #536471;
+}
+
+.highlight-user {
+    color: #1d9bf0;
+    font-weight: bold;
+}
+
+/* Tipke za logout/auth */
+.logout-btn {
+    background-color: #f4212e; /* Crvena za logout */
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 9999px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.auth-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.login-link, .register-link {
+    text-decoration: none;
+    padding: 10px 24px;
+    border-radius: 9999px;
+    font-weight: 700;
+}
+
+.login-link {
+    background-color: #1d9bf0;
+    color: white;
+}
+
+.register-link {
+    border: 1px solid #cfd9de;
+    color: #1d9bf0;
+}
+
+.feed-placeholder {
+    padding: 100px 20px;
+    text-align: center;
+    color: #536471;
+    font-style: italic;
+}

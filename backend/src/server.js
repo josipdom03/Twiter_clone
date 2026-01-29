@@ -9,6 +9,9 @@ import './models/index.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 dotenv.config();
 
 const app = express();
@@ -20,6 +23,13 @@ app.use(cors({
   credentials: true
 }));
 
+
+//Profile image
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use(express.json());
 
@@ -51,3 +61,5 @@ sequelize.sync({ alter: true })
   .catch(err => {
     console.error('Greška pri sinkronizaciji baze:', err);
   });
+
+
