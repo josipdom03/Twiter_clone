@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
+import { Link } from 'react-router-dom';
 import { authStore } from '../stores/AuthStore';
 import axios from 'axios';
 import '../styles/home.css';
@@ -14,7 +15,6 @@ const Home = observer(() => {
     try {
       setLoading(true);
       const res = await axios.get('http://localhost:3000/api/tweets');
-      // Osiguravamo da su podaci niz (array)
       setTweets(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Ne mogu dohvatiti objave:", err.response?.data || err.message);
@@ -28,10 +28,8 @@ const Home = observer(() => {
   }, []);
 
   const handlePostTweet = async () => {
-    // 1. Provjera sadržaja
     if (!tweetContent.trim()) return;
 
-    // 2. Sigurnosna provjera korisnika (sprječava TypeError null reading 'username')
     if (!authStore.user) {
       alert("Korisnički podaci nisu učitani. Pokušajte ponovno za trenutak.");
       return;
@@ -48,8 +46,6 @@ const Home = observer(() => {
         }
       );
 
-      // Ručno kreiramo objekt za novi tweet kako bi se odmah prikazao ispravno
-      // Koristimo Optional Chaining (?.) da budemo 100% sigurni
       const newTweet = {
         ...response.data,
         User: {
@@ -59,12 +55,11 @@ const Home = observer(() => {
         }
       };
 
-      // Dodajemo na vrh liste
       setTweets((prevTweets) => [newTweet, ...prevTweets]);
       setTweetContent(''); 
     } catch (err) {
       console.error("Greška pri objavi na backendu:", err.response?.data || err.message);
-      alert("Došlo je do greške pri objavi. Provjerite konzolu.");
+      alert("Došlo je do greške pri objavi.");
     }
   };
 
@@ -74,15 +69,17 @@ const Home = observer(() => {
         <h2 className="header-title">Početna</h2>
       </header>
 
-      {/* Tweet Box - Prikazuje se samo ako je korisnik autentificiran */}
+      {/* Tweet Box */}
       {authStore.isAuthenticated && (
         <div className="tweet-box-container">
           <div className="tweet-box-avatar">
-            {authStore.user?.avatar ? (
-              <img src={authStore.user.avatar} alt="profil" />
-            ) : (
-              <div className="avatar-placeholder-inner"></div>
-            )}
+            <Link to={`/profile/${authStore.user?.username}`}>
+              {authStore.user?.avatar ? (
+                <img src={authStore.user.avatar} alt="moj profil" />
+              ) : (
+                <div className="avatar-placeholder-inner"></div>
+              )}
+            </Link>
           </div>
           <div className="tweet-box-main">
             <textarea
@@ -115,13 +112,26 @@ const Home = observer(() => {
             {tweets.map((tweet) => (
               <div key={tweet.id || Math.random()} className="tweet-item">
                 <div className="tweet-avatar-placeholder">
-                   {tweet.User?.avatar && <img src={tweet.User.avatar} alt="avatar" />}
+                  {/* Klik na sliku vodi na profil */}
+                  <Link to={`/profile/${tweet.User?.username}`}>
+                    {tweet.User?.avatar ? (
+                      <img src={tweet.User.avatar} alt="avatar" />
+                    ) : (
+                      <div className="avatar-placeholder-inner"></div>
+                    )}
+                  </Link>
                 </div>
                 <div className="tweet-body">
                   <div className="tweet-header-info">
-                    <span className="tweet-username">
-                      @{tweet.User?.username || 'nepoznato'}
-                    </span>
+                    {/* Klik na ime ili username vodi na profil */}
+                    <Link to={`/profile/${tweet.User?.username}`} className="tweet-user-link">
+                      <span className="tweet-display-name">
+                        {tweet.User?.displayName || tweet.User?.username}
+                      </span>
+                      <span className="tweet-username">
+                        @{tweet.User?.username || 'nepoznato'}
+                      </span>
+                    </Link>
                     <span className="tweet-date">
                       • {tweet.createdAt ? new Date(tweet.createdAt).toLocaleDateString() : 'Upravo sad'}
                     </span>

@@ -1,8 +1,10 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import axios from "axios";
+import { authStore } from "./AuthStore";
 
 class UserStore {
     profile = null;
+    publicProfile = null;
     isLoading = false;
     error = null;
 
@@ -10,26 +12,46 @@ class UserStore {
         makeAutoObservable(this);
     }
 
-    // Pomoćna funkcija za dobivanje headera s tokenom
+    /**
+     * Pomoćna funkcija za headere. 
+     * Ako authStore.token još nije postavljen, pokušava ga uzeti direktno iz localStorage-a.
+     */
     getAuthHeaders() {
-        const token = localStorage.getItem("token");
+        const token = authStore.token || localStorage.getItem("token");
         return token ? { Authorization: `Bearer ${token}` } : {};
     }
 
-    // Dohvaćanje profila trenutnog korisnika
     async fetchProfile() {
+        // Ako nema tokena nigdje, nemoj ni slati zahtjev jer će backend vratiti 403
+        const headers = this.getAuthHeaders();
+        if (!headers.Authorization) {
+            console.warn("UserStore: Nema tokena, preskačem fetchProfile.");
+            return;
+        }
+
         this.isLoading = true;
         this.error = null;
+
         try {
-            const response = await axios.get("http://localhost:3000/api/users/profile", {
-                headers: this.getAuthHeaders()
+            const res = await axios.get("http://localhost:3000/api/users/profile", {
+                headers: headers
             });
+
             runInAction(() => {
-                this.profile = response.data;
+                this.profile = res.data;
+                // Osiguraj da je i authStore sinkroniziran ako već nije
+                if (!authStore.user) authStore.user = res.data;
             });
-        } catch (error) {
+        } catch (err) {
+            console.error("fetchProfile Error:", err.response?.status, err.response?.data);
+            
             runInAction(() => {
-                this.error = error.response?.data?.message || "Greška pri učitavanju profila";
+                this.error = err.response?.data?.message || "Greška pri učitavanju profila";
+                
+                // Ako je token nevažeći (403 ili 401), odjavi korisnika
+                if (err.response?.status === 403 || err.response?.status === 401) {
+                    authStore.logout();
+                }
             });
         } finally {
             runInAction(() => {
@@ -38,19 +60,45 @@ class UserStore {
         }
     }
 
-    // Ažuriranje profila (username, bio, avatar)
+    async fetchPublicProfile(username) {
+        // Public profil ne treba auth headere
+        this.isLoading = true;
+        this.error = null;
+        
+        try {
+            const res = await axios.get(`http://localhost:3000/api/users/u/${username}`);
+            runInAction(() => { 
+                this.publicProfile = res.data; 
+            });
+        } catch (err) {
+            console.error("fetchPublicProfile Error:", err);
+            runInAction(() => { 
+                this.publicProfile = null; 
+                this.error = "Korisnik nije pronađen";
+            });
+        } finally {
+            runInAction(() => { this.isLoading = false; });
+        }
+    }
+
     async updateProfile(userData) {
         this.isLoading = true;
         try {
-            const response = await axios.put("http://localhost:3000/api/users/profile", userData, {
+            const res = await axios.put("http://localhost:3000/api/users/profile", userData, {
                 headers: this.getAuthHeaders()
             });
+
             runInAction(() => {
-                this.profile = response.data; // Osvježavamo podatke novim odgovorom s servera
+                this.profile = res.data;
+                // Ažuriraj i glavnog ulogiranog korisnika u AuthStore-u
+                if (authStore.user) {
+                    authStore.user = { ...authStore.user, ...res.data };
+                }
             });
-            return response.data;
-        } catch (error) {
-            throw error.response?.data?.message || "Ažuriranje neuspješno";
+            return res.data;
+        } catch (err) {
+            console.error("updateProfile Error:", err);
+            throw err.response?.data?.message || "Ažuriranje neuspješno";
         } finally {
             runInAction(() => {
                 this.isLoading = false;
@@ -58,10 +106,13 @@ class UserStore {
         }
     }
 
-    // Čišćenje podataka kod odjave
+    // Poziva se kod logouta
     clearUserData() {
-        this.profile = null;
-        this.error = null;
+        runInAction(() => {
+            this.profile = null;
+            this.publicProfile = null;
+            this.error = null;
+        });
     }
 }
 

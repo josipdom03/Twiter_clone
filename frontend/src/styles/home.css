@@ -171,3 +171,25 @@
 .tweet-post-btn:not(:disabled):hover {
     background-color: #1a8cd8;
 }
+
+/*Klik na usera*/
+.tweet-user-link {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    gap: 4px;
+}
+
+.tweet-user-link:hover .tweet-display-name {
+    text-decoration: underline;
+}
+
+.tweet-display-name {
+    font-weight: 800;
+    color: #0f1419;
+}
+
+.tweet-username {
+    color: #536471;
+    font-weight: 400;
+}

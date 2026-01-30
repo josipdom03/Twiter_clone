@@ -70,6 +70,22 @@ class AuthStore {
         this.user = null;
         this.setToken(null);
     }
+
+    // AuthStore.js
+async checkAuth() {
+    if (!this.token) return;
+    try {
+        const res = await axios.get("http://localhost:3000/api/users/profile", {
+            headers: { Authorization: `Bearer ${this.token}` }
+        });
+        runInAction(() => {
+            this.user = res.data;
+            this.isAuthenticated = true;
+        });
+    } catch (err) {
+        this.logout();
+    }
+}
 }
 
 export const authStore = new AuthStore();
