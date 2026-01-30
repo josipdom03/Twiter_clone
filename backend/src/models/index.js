@@ -27,4 +27,9 @@ Comment.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Notification, { as: 'Notifications', foreignKey: 'recipientId' });
 Notification.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
 
+
+//Deleting
+Tweet.hasMany(Comment, { foreignKey: 'tweetId', onDelete: 'CASCADE' });
+User.hasMany(Comment, { foreignKey: 'userId', onDelete: 'CASCADE' });
+
 export { User, Tweet, Comment, Notification };

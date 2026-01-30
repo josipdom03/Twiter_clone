@@ -95,4 +95,79 @@
     text-align: center;
     color: #536471;
     font-style: italic;
+}/* home.css - dodatak za Tweet Box */
+
+.tweet-box-container {
+    display: flex;
+    padding: 16px;
+    border-bottom: 1px solid #eff3f4;
+    background-color: #ffffff;
+}
+
+.tweet-box-avatar {
+    width: 48px;
+    height: 48px;
+    background-color: #cfd9de;
+    border-radius: 50%;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.tweet-box-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.tweet-box-main textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 20px;
+    font-family: inherit;
+    resize: none;
+    padding: 10px 0;
+    color: #0f1419;
+}
+
+.tweet-box-main textarea::placeholder {
+    color: #536471;
+}
+
+.tweet-box-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #eff3f4;
+    padding-top: 12px;
+    margin-top: 5px;
+}
+
+.tweet-icons {
+    display: flex;
+    gap: 15px;
+    color: #1d9bf0;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.tweet-post-btn {
+    background-color: #1d9bf0;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.tweet-post-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.tweet-post-btn:not(:disabled):hover {
+    background-color: #1a8cd8;
 }
