@@ -15,29 +15,20 @@ const Profile = observer(() => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    // Provjera: jesi li to ti? (Ako nema username u URL-u ili ako se podudara s ulogiranim)
     const isMyProfile = !username || (authStore.user && authStore.user.username === username);
 
     useEffect(() => {
         const loadProfile = async () => {
-            runInAction(() => {
-                userStore.publicProfile = null;
-            });
-
+            runInAction(() => { userStore.publicProfile = null; });
             if (isMyProfile) {
-                // Čekaj da se uvjerimo da smo ulogirani prije nego zovemo privatni profil
-                if (authStore.isAuthenticated) {
-                    await userStore.fetchProfile();
-                }
+                if (authStore.isAuthenticated) await userStore.fetchProfile();
             } else if (username) {
                 await userStore.fetchPublicProfile(username);
             }
         };
-
-    loadProfile();
+        loadProfile();
     }, [username, isMyProfile, authStore.isAuthenticated]);
 
-    // Sinkronizacija forme
     useEffect(() => {
         const p = isMyProfile ? userStore.profile : userStore.publicProfile;
         if (p) {
@@ -50,14 +41,6 @@ const Profile = observer(() => {
         }
     }, [userStore.profile, userStore.publicProfile, isMyProfile]);
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
-        }
-    };
-
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
@@ -69,18 +52,12 @@ const Profile = observer(() => {
 
             await userStore.updateProfile(data);
             setIsEditing(false);
-            if (formData.username !== username) {
-                navigate(`/profile/${formData.username}`);
-            }
-        } catch (err) {
-            alert(err);
-        }
+            if (formData.username !== username) navigate(`/profile/${formData.username}`);
+        } catch (err) { alert(err); }
     };
 
     if (userStore.isLoading) return <div className="loader">Učitavanje...</div>;
-
     const p = isMyProfile ? userStore.profile : userStore.publicProfile;
-
     if (!p && !userStore.isLoading) return <div className="error">Korisnik nije pronađen.</div>;
 
     return (
@@ -116,7 +93,10 @@ const Profile = observer(() => {
                             </div>
                         ) : (
                             <form className="edit-form">
-                                <input type="file" onChange={handleFileChange} />
+                                <input type="file" onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) { setSelectedFile(file); setPreviewUrl(URL.createObjectURL(file)); }
+                                }} />
                                 <input type="text" value={formData.displayName} placeholder="Ime" onChange={e => setFormData({...formData, displayName: e.target.value})} />
                                 <input type="text" value={formData.username} placeholder="Username" onChange={e => setFormData({...formData, username: e.target.value})} />
                                 <textarea value={formData.bio} placeholder="Bio" onChange={e => setFormData({...formData, bio: e.target.value})} />
@@ -124,6 +104,33 @@ const Profile = observer(() => {
                         )}
                         {isMyProfile && <button className="logout-link" onClick={() => authStore.logout()}>Odjavi se</button>}
                     </div>
+                </div>
+
+                {/* --- SEKCIJA ZA TWEETOVE --- */}
+                <div className="profile-tweets-section">
+                    <h3 className="section-title">Objave</h3>
+                    {p.Tweets && p.Tweets.length > 0 ? (
+                        <div className="tweets-list">
+                            {p.Tweets.map((tweet) => (
+                                <div key={tweet.id} className="tweet-item">
+                                    <div className="tweet-avatar-placeholder">
+                                        {p.avatar ? <img src={p.avatar} alt="avatar" /> : <div className="avatar-placeholder-inner"></div>}
+                                    </div>
+                                    <div className="tweet-body">
+                                        <div className="tweet-header-info">
+                                            <span className="tweet-display-name">{p.displayName || p.username}</span>
+                                            <span className="tweet-username">@{p.username}</span>
+                                            <span className="tweet-date">• {new Date(tweet.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        <p className="tweet-text">{tweet.content}</p>
+                                        {tweet.image && <img src={tweet.image} className="tweet-image-content" alt="tweet" />}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="no-tweets-msg">Korisnik još nema objavljenih tweetova.</p>
+                    )}
                 </div>
             </div>
         </div>

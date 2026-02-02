@@ -1,12 +1,11 @@
 /* sidebar.css */
 
 .sidebar-main-container {
-    /* Fiksiramo sidebar na lijevu stranu */
     display: flex !important;
-    flex-direction: column !important; /* Ovo prisiljava elemente jedan ispod drugog */
+    flex-direction: column !important;
     width: 260px;
     height: 100vh;
-    position: fixed; /* Sidebar stoji fiksno dok se sadržaj skrola */
+    position: fixed;
     left: 0;
     top: 0;
     background-color: #ffffff;
@@ -24,12 +23,11 @@
 
 .sidebar-vertical-nav {
     display: flex;
-    flex-direction: column; /* Linkovi idu jedan ispod drugog */
+    flex-direction: column;
     gap: 8px;
     margin-top: 20px;
 }
 
-/* Stil za linkove - micanje plave boje i podvlačenja */
 .sidebar-nav-link {
     display: flex;
     align-items: center;
@@ -50,7 +48,6 @@
     font-weight: 800;
 }
 
-/* Gumb "Objavi" */
 .sidebar-action-button {
     background-color: #1d9bf0;
     color: white;
@@ -64,16 +61,32 @@
     width: 100%;
 }
 
-/* Profilni dio na dnu */
+/* --- POPRAVLJENI PROFILNI DIO --- */
+
 .sidebar-footer-profile {
     display: flex;
     align-items: center;
     padding: 12px;
     border-radius: 9999px;
-    margin-top: auto; /* Gura profil na samo dno sidebara */
+    margin-top: auto;
     cursor: pointer;
+    transition: background 0.2s;
 }
 
+.sidebar-footer-profile:hover {
+    background-color: #eff3f4;
+}
+
+/* Stil za stvarnu sliku avatara */
+.sidebar-avatar-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover; /* Sprječava izobličenje slike */
+    flex-shrink: 0;    /* Sprječava skupljanje slike u flexu */
+}
+
+/* Stil za sivi krug ako nema slike */
 .sidebar-avatar-placeholder {
     width: 40px;
     height: 40px;
@@ -84,7 +97,9 @@
 
 .sidebar-user-meta {
     margin-left: 12px;
-    overflow: hidden;
+    overflow: hidden; /* Reže tekst ako je predugačak */
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .sidebar-username {
@@ -98,4 +113,93 @@
     margin: 0;
     color: #536471;
     font-size: 14px;
+}
+
+
+/* MODAL STYLES */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4); /* Zatamnjena pozadina */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Da bude malo prema gore, ne skroz u centru */
+    padding-top: 50px;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: white;
+    width: 600px;
+    border-radius: 16px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.close-modal-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 50%;
+}
+
+.close-modal-btn:hover {
+    background: #f1f1f1;
+}
+
+.modal-body {
+    display: flex;
+    gap: 15px;
+    padding-top: 20px;
+}
+
+.modal-avatar img, .modal-avatar .avatar-placeholder-inner {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.modal-body textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 20px;
+    resize: none;
+    font-family: inherit;
+    min-height: 120px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #eff3f4;
+    padding-top: 15px;
+}
+
+/* Ponovno koristimo stil gumba iz Home.css  */
+.modal-footer .tweet-post-btn {
+    background-color: #1d9bf0;
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    padding: 10px 20px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.modal-footer .tweet-post-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
 }

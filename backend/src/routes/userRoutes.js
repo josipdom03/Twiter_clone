@@ -15,4 +15,5 @@ router.put('/profile', authMiddleware, upload.single('avatar'), updateProfile);
 // Putanja: GET /api/users/u/:username  <-- DODAN /u/ PREFIKS
 router.get('/u/:username', getUserByUsername);
 
+
 export default router;
