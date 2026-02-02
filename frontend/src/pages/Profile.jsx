@@ -4,19 +4,23 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { runInAction } from 'mobx';
 import { authStore } from '../stores/AuthStore';
 import { userStore } from '../stores/UserStore.jsx';
+import TweetDetail from './TweetDetail'; // Promijenjeno da odgovara tvom nazivu fajla
 import '../styles/profile.css';
 
 const Profile = observer(() => {
     const { username } = useParams();
     const navigate = useNavigate();
     
+    // Lokalna stanja
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({ username: '', bio: '', displayName: '' });
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [selectedTweet, setSelectedTweet] = useState(null); // Stanje za otvaranje detalja
 
     const isMyProfile = !username || (authStore.user && authStore.user.username === username);
 
+    // 1. Učitavanje podataka o profilu
     useEffect(() => {
         const loadProfile = async () => {
             runInAction(() => { userStore.publicProfile = null; });
@@ -29,6 +33,7 @@ const Profile = observer(() => {
         loadProfile();
     }, [username, isMyProfile, authStore.isAuthenticated]);
 
+    // 2. Sinkronizacija forme s podacima iz store-a
     useEffect(() => {
         const p = isMyProfile ? userStore.profile : userStore.publicProfile;
         if (p) {
@@ -42,7 +47,7 @@ const Profile = observer(() => {
     }, [userStore.profile, userStore.publicProfile, isMyProfile]);
 
     const handleUpdate = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         try {
             const data = new FormData();
             data.append('username', formData.username);
@@ -52,23 +57,43 @@ const Profile = observer(() => {
 
             await userStore.updateProfile(data);
             setIsEditing(false);
-            if (formData.username !== username) navigate(`/profile/${formData.username}`);
-        } catch (err) { alert(err); }
+            // Ako je korisnik promijenio username, navigiraj na novi URL
+            if (formData.username !== username && username) {
+                navigate(`/profile/${formData.username}`);
+            }
+        } catch (err) { 
+            alert("Greška pri ažuriranju: " + err); 
+        }
     };
 
     if (userStore.isLoading) return <div className="loader">Učitavanje...</div>;
+    
     const p = isMyProfile ? userStore.profile : userStore.publicProfile;
     if (!p && !userStore.isLoading) return <div className="error">Korisnik nije pronađen.</div>;
 
     return (
         <div className="profile-container">
+            {/* --- MODAL DETALJI TWEETA --- */}
+            {selectedTweet && (
+                <TweetDetail 
+                    tweet={selectedTweet} 
+                    onClose={() => setSelectedTweet(null)} 
+                />
+            )}
+
             <div className="profile-card">
                 <div className="profile-banner"></div>
                 <div className="profile-content">
+                    {/* Profilna slika */}
                     <div className="profile-avatar-wrapper">
-                        {previewUrl ? <img src={previewUrl} alt="Avatar" className="profile-avatar" /> : <div className="avatar-placeholder"></div>}
+                        {previewUrl ? (
+                            <img src={previewUrl} alt="Avatar" className="profile-avatar" />
+                        ) : (
+                            <div className="avatar-placeholder"></div>
+                        )}
                     </div>
                     
+                    {/* Akcijski gumbi */}
                     <div className="profile-actions">
                         {isMyProfile ? (
                             !isEditing ? (
@@ -84,6 +109,7 @@ const Profile = observer(() => {
                         )}
                     </div>
 
+                    {/* Informacije o korisniku / Edit forma */}
                     <div className="profile-info">
                         {!isEditing ? (
                             <div className="view-mode">
@@ -92,17 +118,39 @@ const Profile = observer(() => {
                                 <p className="bio">{p?.bio || "Nema biografije."}</p>
                             </div>
                         ) : (
-                            <form className="edit-form">
-                                <input type="file" onChange={(e) => {
-                                    const file = e.target.files[0];
-                                    if (file) { setSelectedFile(file); setPreviewUrl(URL.createObjectURL(file)); }
-                                }} />
-                                <input type="text" value={formData.displayName} placeholder="Ime" onChange={e => setFormData({...formData, displayName: e.target.value})} />
-                                <input type="text" value={formData.username} placeholder="Username" onChange={e => setFormData({...formData, username: e.target.value})} />
-                                <textarea value={formData.bio} placeholder="Bio" onChange={e => setFormData({...formData, bio: e.target.value})} />
+                            <form className="edit-form" onSubmit={handleUpdate}>
+                                <label className="file-input-label">
+                                    Promijeni sliku profila:
+                                    <input type="file" accept="image/*" onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) { 
+                                            setSelectedFile(file); 
+                                            setPreviewUrl(URL.createObjectURL(file)); 
+                                        }
+                                    }} />
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={formData.displayName} 
+                                    placeholder="Ime prikaza" 
+                                    onChange={e => setFormData({...formData, displayName: e.target.value})} 
+                                />
+                                <input 
+                                    type="text" 
+                                    value={formData.username} 
+                                    placeholder="Korisničko ime" 
+                                    onChange={e => setFormData({...formData, username: e.target.value})} 
+                                />
+                                <textarea 
+                                    value={formData.bio} 
+                                    placeholder="Biografija" 
+                                    onChange={e => setFormData({...formData, bio: e.target.value})} 
+                                />
                             </form>
                         )}
-                        {isMyProfile && <button className="logout-link" onClick={() => authStore.logout()}>Odjavi se</button>}
+                        {isMyProfile && !isEditing && (
+                            <button className="logout-link" onClick={() => authStore.logout()}>Odjavi se</button>
+                        )}
                     </div>
                 </div>
 
@@ -112,9 +160,25 @@ const Profile = observer(() => {
                     {p.Tweets && p.Tweets.length > 0 ? (
                         <div className="tweets-list">
                             {p.Tweets.map((tweet) => (
-                                <div key={tweet.id} className="tweet-item">
+                                <div 
+                                    key={tweet.id} 
+                                    className="tweet-item"
+                                    onClick={() => setSelectedTweet({
+                                        ...tweet,
+                                        User: {
+                                            username: p.username,
+                                            displayName: p.displayName,
+                                            avatar: p.avatar
+                                        }
+                                    })}
+                                    style={{ cursor: 'pointer' }}
+                                >
                                     <div className="tweet-avatar-placeholder">
-                                        {p.avatar ? <img src={p.avatar} alt="avatar" /> : <div className="avatar-placeholder-inner"></div>}
+                                        {p.avatar ? (
+                                            <img src={p.avatar} alt="avatar" />
+                                        ) : (
+                                            <div className="avatar-placeholder-inner"></div>
+                                        )}
                                     </div>
                                     <div className="tweet-body">
                                         <div className="tweet-header-info">
@@ -123,7 +187,11 @@ const Profile = observer(() => {
                                             <span className="tweet-date">• {new Date(tweet.createdAt).toLocaleDateString()}</span>
                                         </div>
                                         <p className="tweet-text">{tweet.content}</p>
-                                        {tweet.image && <img src={tweet.image} className="tweet-image-content" alt="tweet" />}
+                                        {tweet.image && (
+                                            <div className="tweet-image-container">
+                                                <img src={tweet.image} className="tweet-image-content" alt="tweet" />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

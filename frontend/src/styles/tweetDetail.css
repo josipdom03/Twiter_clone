@@ -1,0 +1,67 @@
+.tweet-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Zatamnjenje pozadine */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.tweet-modal-content {
+    background: white;
+    width: 100%;
+    max-width: 600px;
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.modal-tweet-header {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+    gap: 12px;
+}
+
+.modal-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.modal-display-name { font-weight: bold; display: block; }
+.modal-username { color: #536471; }
+
+.modal-tweet-text {
+    font-size: 22px; /* Veći font za "povećanu" objavu */
+    line-height: 1.3;
+    margin: 15px 0;
+}
+
+.modal-tweet-image {
+    width: 100%;
+    border-radius: 16px;
+    margin-bottom: 15px;
+}
+
+.modal-date {
+    color: #536471;
+    font-size: 15px;
+}

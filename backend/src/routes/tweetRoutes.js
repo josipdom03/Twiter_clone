@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTweet, getAllTweets } from '../controllers/tweetController.js';
+import { createTweet, getAllTweets,getTweetById } from '../controllers/tweetController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -9,5 +9,8 @@ router.get('/', getAllTweets);
 
 // Putanja: POST /api/tweets (zaštićena ruta)
 router.post('/', authMiddleware, createTweet);
+
+//Putanja:  GET /api/tweet/:id
+router.get('/:id', getTweetById);
 
 export default router;
