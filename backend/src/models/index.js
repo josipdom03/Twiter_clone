@@ -18,7 +18,6 @@ Tweet.belongsToMany(User, { through: 'Likes', as: 'LikedBy' });
 User.belongsToMany(Tweet, { through: 'Likes', as: 'LikedTweets' });
 
 // Comments (1:N)
-Tweet.hasMany(Comment, { foreignKey: 'tweetId' });
 Comment.belongsTo(Tweet, { foreignKey: 'tweetId' });
 User.hasMany(Comment, { foreignKey: 'userId' });
 Comment.belongsTo(User, { foreignKey: 'userId' });

@@ -1,4 +1,4 @@
-import { Tweet, User } from '../models/index.js'; 
+import { Tweet, User, Comment } from '../models/index.js'; 
 
 export const getAllTweets = async (req, res) => {
   try {
@@ -37,16 +37,25 @@ export const getTweetById = async (req, res) => {
   try {
     const { id } = req.params;
     const tweet = await Tweet.findByPk(id, {
-      include: [{ 
-        model: User, 
-        attributes: ['username', 'displayName', 'avatar'] 
-      }]
+      include: [
+        { 
+          model: User, 
+          attributes: ['username', 'displayName', 'avatar'] 
+        },
+        {
+          model: Comment,
+          include: [{ 
+            model: User, 
+            attributes: ['username', 'displayName', 'avatar'] // Tko je napisao komentar
+          }],
+          // Poredaj komentare tako da najnoviji budu na vrhu
+          separate: true, 
+          order: [['createdAt', 'DESC']]
+        }
+      ]
     });
 
-    if (!tweet) {
-      return res.status(404).json({ message: "Objava nije pronađena" });
-    }
-
+    if (!tweet) return res.status(404).json({ message: "Objava nije pronađena" });
     res.json(tweet);
   } catch (error) {
     res.status(500).json({ message: error.message });

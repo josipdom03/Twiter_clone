@@ -39,7 +39,6 @@ class UserStore {
 
             runInAction(() => {
                 this.profile = res.data;
-                // Osiguraj da je i authStore sinkroniziran ako već nije
                 if (!authStore.user) authStore.user = res.data;
             });
         } catch (err) {
@@ -90,7 +89,6 @@ class UserStore {
 
             runInAction(() => {
                 this.profile = res.data;
-                // Ažuriraj i glavnog ulogiranog korisnika u AuthStore-u
                 if (authStore.user) {
                     authStore.user = { ...authStore.user, ...res.data };
                 }

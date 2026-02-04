@@ -65,3 +65,108 @@
     color: #536471;
     font-size: 15px;
 }
+
+/* --- Kontejner za unos komentara --- */
+.comment-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px;
+}
+
+.comment-input-wrapper textarea {
+    width: 100%;
+    min-height: 80px;
+    border: none;
+    outline: none;
+    font-size: 19px;
+    font-family: inherit;
+    resize: none;
+    margin-bottom: 10px;
+    padding: 10px 0;
+}
+
+.post-comment-btn {
+    align-self: flex-end;
+    background-color: #1d9bf0;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 9999px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.post-comment-btn:hover {
+    background-color: #1a8cd8;
+}
+
+.post-comment-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* --- Lista komentara --- */
+.modal-divider {
+    border: none;
+    border-top: 1px solid #eff3f4;
+    margin: 15px -20px; /* Širi se do rubova modala */
+}
+
+.comments-list {
+    margin-top: 10px;
+}
+
+.comment-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eff3f4;
+}
+
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-content {
+    flex: 1;
+}
+
+.comment-user-info {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.comment-display-name {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.comment-username {
+    color: #536471;
+    font-size: 15px;
+}
+
+.comment-text {
+    font-size: 15px;
+    line-height: 1.4;
+    color: #0f1419;
+}
+
+.no-comments {
+    text-align: center;
+    color: #536471;
+    padding: 30px 0;
+}
+
+/* --- Prilagodba modala za tamnu pozadinu --- */
+.tweet-modal-content {
+    background: #ffffff;
+    border: none;
+}
