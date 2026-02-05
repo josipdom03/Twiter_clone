@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Link } from 'react-router-dom';
-import { authStore } from '../stores/AuthStore';
+import { authStore } from '../stores/AuthStore.jsx';
+import { Tweet } from '../components/layout/Tweet.jsx';
 import axios from 'axios';
 import TweetDetail from './TweetDetail';
 import '../styles/home.css';
@@ -62,37 +62,19 @@ const Home = observer(() => {
     }
   };
 
-  const handleLikeTweet = async (e, tweetId) => {
-    e.stopPropagation(); 
-    
-    // 1. POPRAVAK: Sigurnosna provjera prijave prije pristupa ID-u
-    if (!authStore.isAuthenticated || !authStore.user?.id) {
-      return alert("Moraš biti prijavljen!");
-    }
-
-    try {
-      const res = await axios.post(
-        `http://localhost:3000/api/likes/tweet/${tweetId}/like`,
-        {},
-        { headers: { Authorization: `Bearer ${authStore.token}` } }
-      );
-
-      setTweets(prev => prev.map(t => {
-        if (t.id === tweetId) {
-          const isLiked = res.data.liked;
-          const currentLikes = t.LikedByUsers || [];
-          return {
-            ...t,
-            LikedByUsers: isLiked 
-              ? [...currentLikes, { id: authStore.user.id }] 
-              : currentLikes.filter(u => u.id !== authStore.user.id)
-          };
-        }
-        return t;
-      }));
-    } catch (err) {
-      console.error("Greška pri lajkanju:", err);
-    }
+  const updateLikeInState = (tweetId, isLiked) => {
+    setTweets(prev => prev.map(t => {
+      if (t.id === tweetId) {
+        const currentLikes = t.LikedByUsers || [];
+        return {
+          ...t,
+          LikedByUsers: isLiked 
+            ? [...currentLikes, { id: authStore.user.id }] 
+            : currentLikes.filter(u => u.id !== authStore.user.id)
+        };
+      }
+      return t;
+    }));
   };
 
   return (
@@ -126,41 +108,14 @@ const Home = observer(() => {
           <div className="feed-placeholder"><p>Učitavanje...</p></div>
         ) : (
           <div className="tweets-list">
-            {tweets.map((tweet) => {
-              // 2. POPRAVAK: Optional chaining na authStore.user?.id
-              const isLiked = tweet.LikedByUsers?.some(u => u.id === authStore.user?.id);
-              
-              return (
-                <div 
-                  key={tweet.id} 
-                  className="tweet-item" 
-                  onClick={() => handleOpenTweet(tweet)} 
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="tweet-avatar-placeholder" onClick={(e) => e.stopPropagation()}>
-                    <Link to={`/profile/${tweet.User?.username}`}>
-                      <img src={tweet.User?.avatar || '/default-avatar.png'} alt="avatar" />
-                    </Link>
-                  </div>
-                  <div className="tweet-body">
-                    <div className="tweet-header-info">
-                      <span className="tweet-display-name">{tweet.User?.displayName}</span>
-                      <span className="tweet-username">@{tweet.User?.username}</span>
-                    </div>
-                    <p className="tweet-text">{tweet.content}</p>
-                    <div className="tweet-actions">
-                      <span>💬 {tweet.Comments?.length || 0}</span>
-                      <span 
-                        className={`action-btn like-btn ${isLiked ? 'active' : ''}`}
-                        onClick={(e) => handleLikeTweet(e, tweet.id)}
-                      >
-                        {isLiked ? '❤️' : '🤍'} {tweet.LikedByUsers?.length || 0}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {tweets.map((tweet) => (
+              <Tweet 
+                key={tweet.id} 
+                tweet={tweet} 
+                onOpen={handleOpenTweet} 
+                onLikeUpdate={updateLikeInState}
+              />
+            ))}
           </div>
         )}
       </div>
