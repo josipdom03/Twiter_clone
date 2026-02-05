@@ -194,3 +194,49 @@
 .action-btn.active, .c-like-btn.active {
     color: #f91880;
 }
+
+.modal-main-actions {
+    display: flex;
+    gap: 20px;
+    padding: 15px 0;
+    border-top: 1px solid #eff3f4;
+    margin-top: 15px;
+}
+
+.action-stat {
+    font-size: 15px;
+    color: #536471;
+}
+
+.action-stat strong {
+    color: #0f1419;
+}
+
+.modal-action-buttons {
+    display: flex;
+    padding: 10px 0;
+    border-top: 1px solid #eff3f4;
+}
+
+.modal-like-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #536471;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 9999px;
+    transition: 0.2s;
+}
+
+.modal-like-btn:hover {
+    background-color: rgba(249, 24, 128, 0.1);
+    color: #f91880;
+}
+
+.modal-like-btn.active {
+    color: #f91880;
+}
