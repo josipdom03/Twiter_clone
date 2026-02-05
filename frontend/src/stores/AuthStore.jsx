@@ -11,7 +11,6 @@ class AuthStore {
         makeAutoObservable(this);
     }
 
-    // Postavljanje tokena nakon prijave
     setToken(token) {
         this.token = token;
         if (token) {
@@ -19,11 +18,11 @@ class AuthStore {
             this.isAuthenticated = true;
         } else {
             localStorage.removeItem("token");
+            localStorage.removeItem("user"); // Čistimo sve
             this.isAuthenticated = false;
         }
     }
 
-    // Registracija novog korisnika
     async register(username, email, password) {
         this.isLoading = true;
         try {
@@ -36,13 +35,10 @@ class AuthStore {
         } catch (error) {
             throw error.response?.data?.message || "Registracija neuspješna";
         } finally {
-            runInAction(() => {
-                this.isLoading = false;
-            });
+            runInAction(() => { this.isLoading = false; });
         }
     }
 
-    // Prijava korisnika
     async login(email, password) {
         this.isLoading = true;
         try {
@@ -59,33 +55,40 @@ class AuthStore {
         } catch (error) {
             throw error.response?.data?.message || "Prijava neuspješna";
         } finally {
-            runInAction(() => {
-                this.isLoading = false;
-            });
+            runInAction(() => { this.isLoading = false; });
         }
     }
 
-    // Odjava
     logout() {
-        this.user = null;
-        this.setToken(null);
+        runInAction(() => {
+            this.user = null;
+            this.setToken(null);
+        });
     }
 
-    // AuthStore.js
-async checkAuth() {
-    if (!this.token) return;
-    try {
-        const res = await axios.get("http://localhost:3000/api/users/profile", {
-            headers: { Authorization: `Bearer ${this.token}` }
-        });
-        runInAction(() => {
-            this.user = res.data;
-            this.isAuthenticated = true;
-        });
-    } catch (err) {
-        this.logout();
+    async checkAuth() {
+        // Ako nema tokena, nemamo što provjeravati
+        if (!this.token) {
+            runInAction(() => { this.isAuthenticated = false; });
+            return;
+        }
+
+        runInAction(() => { this.isLoading = true; });
+        try {
+            const res = await axios.get("http://localhost:3000/api/users/profile", {
+                headers: { Authorization: `Bearer ${this.token}` }
+            });
+            runInAction(() => {
+                this.user = res.data;
+                this.isAuthenticated = true;
+            });
+        } catch (err) {
+            console.error("Auth check failed:", err);
+            this.logout();
+        } finally {
+            runInAction(() => { this.isLoading = false; });
+        }
     }
-}
 }
 
 export const authStore = new AuthStore();

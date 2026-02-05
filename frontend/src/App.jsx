@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { authStore } from './stores/AuthStore';
@@ -16,13 +16,28 @@ import Sidebar from './components/layout/Sidebar';
 import RightPanel from './components/layout/RightPanel';
 
 const App = observer(() => {
-  const { isAuthenticated } = authStore;
+  const { isAuthenticated, isLoading } = authStore;
+
+  // Provjera korisnika odmah pri paljenju aplikacije/osvježavanju
+  useEffect(() => {
+    authStore.checkAuth();
+  }, []);
+
+  // Dok se provjerava token, prikaži loader (sprječava blicanje login stranice)
+  if (isLoading && !authStore.user && authStore.token) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span className="ml-3">Učitavanje...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-black min-h-screen text-white">
       <div className="max-w-7xl mx-auto flex justify-center">
         
-        {/* Sidebar - Prikazuje se samo ako je korisnik ulogiran */}
+        {/* Sidebar - Prikazuje se samo ulogiranima */}
         {isAuthenticated && (
           <div className="hidden sm:block w-20 xl:w-64 sticky top-0 h-screen">
             <Sidebar />
@@ -53,10 +68,6 @@ const App = observer(() => {
               element={isAuthenticated ? <Notifications /> : <Navigate to="/login" />} 
             />
             
-            {/* PROFIL RUTE:
-              1. /profile -> tvoj profil (isMyProfile će biti true jer nema username parametra)
-              2. /profile/:username -> tuđi profil (ili tvoj ako je ime isto)
-            */}
             <Route 
               path="/profile" 
               element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} 
@@ -66,15 +77,12 @@ const App = observer(() => {
               element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} 
             />
             
-            {/* Fallback - ako ništa ne pogodi, idi na početnu */}
+            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" />} />
-
-            <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
-            <Route path="/profile/:username" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />  
           </Routes>
         </main>
 
-        {/* Right Panel */}
+        {/* Right Panel - Prikazuje se samo ulogiranima */}
         {isAuthenticated && (
           <div className="hidden lg:block w-80 ml-8 sticky top-0 h-screen">
             <RightPanel />
