@@ -170,3 +170,27 @@
     background: #ffffff;
     border: none;
 }
+
+
+.tweet-actions, .comment-actions {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    color: #65676b;
+}
+
+.action-btn, .c-like-btn {
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.action-btn:hover, .c-like-btn:hover {
+    color: #f91880;
+}
+
+.action-btn.active, .c-like-btn.active {
+    color: #f91880;
+}

@@ -3,17 +3,28 @@ import { Tweet, User, Comment } from '../models/index.js';
 export const getAllTweets = async (req, res) => {
   try {
     const tweets = await Tweet.findAll({
-      // Ovo puca ako relacije nisu učitane ili ako User model nije dostupan
-      include: [{ 
-        model: User, 
-        attributes: ['username', 'displayName'] 
-      }],
+      include: [
+        { 
+          model: User, 
+          attributes: ['username', 'displayName', 'avatar'] 
+        },
+        // OVO JE DODANO: Uključujemo lajkove za svaki tweet
+        {
+          model: User,
+          as: 'LikedByUsers',
+          attributes: ['id'] // Treba nam samo ID da provjerimo isLiked na frontendu
+        },
+        // Dodajemo i komentare da bismo imali ispravan broj (lenght)
+        {
+          model: Comment,
+          attributes: ['id']
+        }
+      ],
       order: [['createdAt', 'DESC']]
     });
     res.json(tweets);
   } catch (error) {
-    // Dodaj ovo da u terminalu vidiš TOČAN opis greške (npr. "User is not associated to Tweet")
-    console.error("SERVER ERROR:", error); 
+    console.error("SERVER ERROR (getAllTweets):", error); 
     res.status(500).json({ message: error.message });
   }
 };
@@ -24,14 +35,19 @@ export const createTweet = async (req, res) => {
     const newTweet = await Tweet.create({
       content,
       image,
-      userId: req.user.id // Koristi malo 'u' - userId
+      userId: req.user.id 
     });
-    res.status(201).json(newTweet);
+    
+    // Vraćamo tweet s praznim nizovima da frontend ne puca odmah nakon objave
+    res.status(201).json({
+      ...newTweet.toJSON(),
+      LikedByUsers: [],
+      Comments: []
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 export const getTweetById = async (req, res) => {
   try {
@@ -42,13 +58,26 @@ export const getTweetById = async (req, res) => {
           model: User, 
           attributes: ['username', 'displayName', 'avatar'] 
         },
+        // DODANO: Lajkovi za sam tweet
+        {
+          model: User,
+          as: 'LikedByUsers',
+          attributes: ['id']
+        },
         {
           model: Comment,
-          include: [{ 
-            model: User, 
-            attributes: ['username', 'displayName', 'avatar'] // Tko je napisao komentar
-          }],
-          // Poredaj komentare tako da najnoviji budu na vrhu
+          include: [
+            { 
+              model: User, 
+              attributes: ['username', 'displayName', 'avatar'] 
+            },
+            // DODANO: Lajkovi za svaki komentar unutar tweeta
+            {
+              model: User,
+              as: 'LikedByUsers',
+              attributes: ['id']
+            }
+          ],
           separate: true, 
           order: [['createdAt', 'DESC']]
         }
@@ -58,6 +87,7 @@ export const getTweetById = async (req, res) => {
     if (!tweet) return res.status(404).json({ message: "Objava nije pronađena" });
     res.json(tweet);
   } catch (error) {
+    console.error("SERVER ERROR (getTweetById):", error);
     res.status(500).json({ message: error.message });
   }
 };

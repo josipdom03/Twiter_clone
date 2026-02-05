@@ -3,32 +3,34 @@ import Tweet from './Tweet.js';
 import Comment from './Comment.js';
 import Notification from './Notification.js';
 
-// --- Relacije ---
-
-// User & Tweet
+// --- USER & TWEET (1:N) ---
 User.hasMany(Tweet, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Tweet.belongsTo(User, { foreignKey: 'userId' });
 
-// Follow sustav (N:M)
+// --- TWEET LIKES (N:M) ---
+// Koristimo 'TweetLikes' kao tablicu i 'LikedByUsers' kao alias da odgovara frontendu
+Tweet.belongsToMany(User, { through: 'TweetLikes', as: 'LikedByUsers' });
+User.belongsToMany(Tweet, { through: 'TweetLikes', as: 'LikedTweets' });
+
+// --- FOLLOW SUSTAV (N:M) ---
 User.belongsToMany(User, { as: 'Followers', foreignKey: 'followingId', through: 'Follows' });
 User.belongsToMany(User, { as: 'Following', foreignKey: 'followerId', through: 'Follows' });
 
-// Likes (N:M)
-Tweet.belongsToMany(User, { through: 'Likes', as: 'LikedBy' });
-User.belongsToMany(Tweet, { through: 'Likes', as: 'LikedTweets' });
-
-// Comments (1:N)
+// --- COMMENTS (1:N) ---
+// Tweet ima mnogo komentara
+Tweet.hasMany(Comment, { foreignKey: 'tweetId', onDelete: 'CASCADE' });
 Comment.belongsTo(Tweet, { foreignKey: 'tweetId' });
-User.hasMany(Comment, { foreignKey: 'userId' });
+
+// User ima mnogo komentara
+User.hasMany(Comment, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Comment.belongsTo(User, { foreignKey: 'userId' });
 
-// Notifications
+// --- COMMENT LIKES (N:M) ---
+Comment.belongsToMany(User, { through: 'CommentLikes', as: 'LikedByUsers' });
+User.belongsToMany(Comment, { through: 'CommentLikes', as: 'LikedComments' });
+
+// --- NOTIFICATIONS (1:N) ---
 User.hasMany(Notification, { as: 'Notifications', foreignKey: 'recipientId' });
 Notification.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
-
-
-//Deleting
-Tweet.hasMany(Comment, { foreignKey: 'tweetId', onDelete: 'CASCADE' });
-User.hasMany(Comment, { foreignKey: 'userId', onDelete: 'CASCADE' });
 
 export { User, Tweet, Comment, Notification };

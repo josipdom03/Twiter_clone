@@ -9,7 +9,8 @@ import './models/index.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import tweetRoutes from './routes/tweetRoutes.js';
-import commentRoutes from './routes/commentRoutes.js'
+import commentRoutes from './routes/commentRoutes.js';
+import likeRoutes from './routes/likeRoutes.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -46,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tweets', tweetRoutes);
 app.use('/api/comments',commentRoutes);
+app.use('/api/likes',likeRoutes);
 
 app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');
