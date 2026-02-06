@@ -41,6 +41,13 @@ export const register = async (req, res) => {
 
   } catch (error) {
     console.error("Greška pri registraciji:", error);
+
+
+    if (error.name === 'SequelizeValidationError') {
+      // Uzimamo prvu poruku iz niza grešaka
+      const msg = error.errors.map(err => err.message).join(', ');
+      return res.status(400).json({ message: `Greška u podacima: ${msg}` });
+    }
     res.status(500).json({ message: "Interna greška servera pri registraciji." });
   }
 };

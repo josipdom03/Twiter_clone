@@ -20,6 +20,7 @@ const Profile = observer(() => {
 
     const isMyProfile = !username || (authStore.user && authStore.user.username === username);
 
+    // 1. Učitavanje profila s API-ja
     useEffect(() => {
         const loadProfile = async () => {
             runInAction(() => { userStore.publicProfile = null; });
@@ -32,6 +33,7 @@ const Profile = observer(() => {
         loadProfile();
     }, [username, isMyProfile, authStore.isAuthenticated]);
 
+    // 2. Sinkronizacija lokalnog state-a (formule) s podacima iz store-a
     useEffect(() => {
         const p = isMyProfile ? userStore.profile : userStore.publicProfile;
         if (p) {
@@ -44,6 +46,16 @@ const Profile = observer(() => {
         }
     }, [userStore.profile, userStore.publicProfile, isMyProfile]);
 
+    // 3. Hendlanje odabira nove datoteke (Slike)
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file); // Za slanje na backend
+            setPreviewUrl(URL.createObjectURL(file)); // Za instantni prikaz na frontendu
+        }
+    };
+
+    // 4. Slanje promjena na server
     const handleUpdate = async (e) => {
         if (e) e.preventDefault();
         try {
@@ -51,10 +63,16 @@ const Profile = observer(() => {
             data.append('username', formData.username);
             data.append('displayName', formData.displayName);
             data.append('bio', formData.bio);
-            if (selectedFile) data.append('avatar', selectedFile);
+            
+            // Ako je korisnik odabrao novu sliku, dodaj je u FormData
+            if (selectedFile) {
+                data.append('avatar', selectedFile);
+            }
 
             await userStore.updateProfile(data);
             setIsEditing(false);
+            setSelectedFile(null); // Resetiraj nakon uspjeha
+
             if (formData.username !== username && username) {
                 navigate(`/profile/${formData.username}`);
             }
@@ -80,11 +98,27 @@ const Profile = observer(() => {
             <div className="profile-card">
                 <div className="profile-banner"></div>
                 <div className="profile-content">
+                    
+                    {/* AVATAR SEKCIJA */}
                     <div className="profile-avatar-wrapper">
                         {previewUrl ? (
                             <img src={previewUrl} alt="Avatar" className="profile-avatar" />
                         ) : (
                             <div className="avatar-placeholder"></div>
+                        )}
+                        
+                        {/* Gumb za odabir slike (vidi se samo u Edit modu) */}
+                        {isEditing && (
+                            <label htmlFor="avatar-upload" className="avatar-edit-overlay">
+                                <span>Promijeni</span>
+                                <input 
+                                    id="avatar-upload"
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={handleFileChange} 
+                                    style={{ display: 'none' }} 
+                                />
+                            </label>
                         )}
                     </div>
                     
@@ -94,7 +128,10 @@ const Profile = observer(() => {
                                 <button className="edit-btn" onClick={() => setIsEditing(true)}>Uredi profil</button>
                             ) : (
                                 <div className="edit-buttons-gap">
-                                    <button className="cancel-btn" onClick={() => setIsEditing(false)}>Odustani</button>
+                                    <button className="cancel-btn" onClick={() => {
+                                        setIsEditing(false);
+                                        setPreviewUrl(p.avatar); // Vrati staru sliku na odustani
+                                    }}>Odustani</button>
                                     <button className="save-btn" onClick={handleUpdate}>Spremi</button>
                                 </div>
                             )
@@ -112,17 +149,23 @@ const Profile = observer(() => {
                             </div>
                         ) : (
                             <form className="edit-form" onSubmit={handleUpdate}>
-                                <input 
-                                    type="text" 
-                                    value={formData.displayName} 
-                                    placeholder="Ime prikaza" 
-                                    onChange={e => setFormData({...formData, displayName: e.target.value})} 
-                                />
-                                <textarea 
-                                    value={formData.bio} 
-                                    placeholder="Biografija" 
-                                    onChange={e => setFormData({...formData, bio: e.target.value})} 
-                                />
+                                <div className="input-group">
+                                    <label>Ime prikaza</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.displayName} 
+                                        placeholder="Ime prikaza" 
+                                        onChange={e => setFormData({...formData, displayName: e.target.value})} 
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label>Biografija</label>
+                                    <textarea 
+                                        value={formData.bio} 
+                                        placeholder="Biografija" 
+                                        onChange={e => setFormData({...formData, bio: e.target.value})} 
+                                    />
+                                </div>
                             </form>
                         )}
                         {isMyProfile && !isEditing && (
@@ -138,10 +181,9 @@ const Profile = observer(() => {
                             {p.Tweets.map((tweet) => (
                                 <Tweet 
                                     key={tweet.id}
-                                    tweet={{...tweet, User: p}} // Osiguravamo da Tweet ima podatke o autoru
+                                    tweet={{...tweet, User: p}} 
                                     onOpen={setSelectedTweet}
                                     onLikeUpdate={() => {
-                                        // Osvježi profil nakon lajka
                                         if (isMyProfile) userStore.fetchProfile();
                                         else userStore.fetchPublicProfile(p.username);
                                     }}

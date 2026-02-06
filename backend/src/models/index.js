@@ -2,6 +2,7 @@ import User from './User.js';
 import Tweet from './Tweet.js';
 import Comment from './Comment.js';
 import Notification from './Notification.js';
+import Message from './Message.js';
 
 // --- USER & TWEET (1:N) ---
 User.hasMany(Tweet, { foreignKey: 'userId', onDelete: 'CASCADE' });
@@ -32,5 +33,13 @@ User.belongsToMany(Comment, { through: 'CommentLikes', as: 'LikedComments' });
 // --- NOTIFICATIONS (1:N) ---
 User.hasMany(Notification, { as: 'Notifications', foreignKey: 'recipientId' });
 Notification.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
+// --- MESSAGES (1:N) ---
+// Korisnik može poslati mnogo poruka
+User.hasMany(Message, { as: 'SentMessages', foreignKey: 'senderId' });
+// Korisnik može primiti mnogo poruka
+User.hasMany(Message, { as: 'ReceivedMessages', foreignKey: 'recipientId' });
 
-export { User, Tweet, Comment, Notification };
+Message.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
+Message.belongsTo(User, { as: 'Recipient', foreignKey: 'recipientId' });
+
+export { User, Tweet, Comment, Notification,Message };
