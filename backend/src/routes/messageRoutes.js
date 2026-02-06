@@ -1,10 +1,10 @@
 import express from 'express';
-import { sendMessage, getChat } from '../controllers/messagesController.js';
-import { authenticateToken } from '../middleware/authMiddleware.js'; // Tvoj middleware za JWT
+import { sendMessage, getChat } from '../controllers/messageController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', authenticateToken, sendMessage);
-router.get('/:userId', authenticateToken, getChat);
+router.post('/', authMiddleware, sendMessage);
+router.get('/:userId', authMiddleware, getChat);
 
 export default router;

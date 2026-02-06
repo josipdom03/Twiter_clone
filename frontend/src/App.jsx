@@ -10,6 +10,8 @@ import Login from './pages/Login';
 import Register from './pages/Register'; 
 import VerifyEmail from './pages/VerifyEmail'; 
 import Notifications from './pages/Notifications';
+import Messages from './pages/Messages';
+import ChatDetail from './pages/ChatDetails';
 
 // Components
 import Sidebar from './components/layout/Sidebar';
@@ -66,6 +68,16 @@ const App = observer(() => {
             <Route 
               path="/notifications" 
               element={isAuthenticated ? <Notifications /> : <Navigate to="/login" />} 
+            />
+
+            {/* PORUKE / MESSAGES */}
+            <Route 
+              path="/messages" 
+              element={authStore.isAuthenticated ? <Messages /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/messages/:userId" 
+              element={authStore.isAuthenticated ? <ChatDetail /> : <Navigate to="/login" />} 
             />
             
             <Route 

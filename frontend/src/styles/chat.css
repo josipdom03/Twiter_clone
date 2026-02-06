@@ -1,0 +1,134 @@
+/* Glavni prozor chata */
+.chat-detail {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 600px;
+    margin: 0 auto;
+    background: #fff;
+    border-left: 1px solid #eff3f4;
+    border-right: 1px solid #eff3f4;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #eff3f4;
+    gap: 20px;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.back-btn:hover {
+    background: #e7e7e8;
+}
+
+/* Prostor za poruke sa skrolanjem */
+.chat-messages-area {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Razmak između mjehurića */
+}
+
+/* Mjehurići poruka */
+.message-wrapper {
+    display: flex;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.message-wrapper.mine {
+    justify-content: flex-end;
+}
+
+.message-wrapper.theirs {
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.message-bubble {
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 20px;
+    word-wrap: break-word;
+}
+
+/* Stil za MOJE poruke */
+.mine .message-bubble {
+    background-color: #1d9bf0;
+    color: #fff;
+    border-radius: 20px 20px 2px 20px;
+}
+
+/* Stil za TUĐE poruke */
+.theirs .message-bubble {
+    background-color: #eff3f4;
+    color: #0f1419;
+    border-radius: 20px 20px 20px 2px;
+}
+
+.mini-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    align-self: flex-end;
+}
+
+/* Donja forma za unos */
+.chat-input-form {
+    padding: 12px 16px;
+    border-top: 1px solid #eff3f4;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+}
+
+.chat-input-form input {
+    flex: 1;
+    background-color: #eff3f4;
+    border: 1px solid transparent;
+    border-radius: 20px;
+    padding: 10px 18px;
+    font-size: 15px;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.chat-input-form input:focus {
+    background-color: #fff;
+    border-color: #1d9bf0;
+}
+
+.chat-input-form button {
+    background: none;
+    border: none;
+    color: #1d9bf0;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s;
+}
+
+.chat-input-form button:disabled {
+    color: #8ecdf8;
+    cursor: default;
+}
+
+.chat-input-form button:active:not(:disabled) {
+    transform: scale(0.9);
+}

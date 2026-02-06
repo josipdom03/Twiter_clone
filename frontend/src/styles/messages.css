@@ -1,0 +1,87 @@
+/* Glavni kontejner za Inbox */
+.messages-page {
+    max-width: 600px;
+    margin: 0 auto;
+    border-left: 1px solid #eff3f4;
+    border-right: 1px solid #eff3f4;
+    min-height: 100vh;
+    background: #fff;
+}
+
+.messages-header {
+    padding: 15px;
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #eff3f4;
+    z-index: 10;
+}
+
+.messages-header h2 {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0;
+}
+
+/* Pojedinačna stavka u listi razgovora */
+.conversation-item {
+    display: flex;
+    padding: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #f7f9f9;
+}
+
+.conversation-item:hover {
+    background-color: #f7f7f7;
+}
+
+.conv-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.conv-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.conv-user-header {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 2px;
+}
+
+.display-name {
+    font-weight: 700;
+    color: #0f1419;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.username {
+    color: #536471;
+    font-size: 15px;
+}
+
+.last-message {
+    margin: 0;
+    color: #536471;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.unread-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #1d9bf0;
+    border-radius: 50%;
+}

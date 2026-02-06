@@ -13,8 +13,12 @@ export const sendMessage = async (req, res) => {
             content
         });
 
-        // OVDJE ĆE IĆI SOCKET.IO KASNIJE (da poruka stigne instant)
+        req.io.to(`user_${recipientId}`).emit('receive_message', fullMessage);
+        
+        // Šaljemo potvrdu i pošiljatelju (korisno ako je ulogiran na više uređaja)
+        req.io.to(`user_${senderId}`).emit('receive_message', fullMessage);
 
+        
         res.status(201).json(message);
     } catch (error) {
         res.status(500).json({ message: 'Greška pri slanju poruke' });

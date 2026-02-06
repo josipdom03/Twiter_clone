@@ -12,6 +12,7 @@ const Sidebar = observer(() => {
   const menuItems = [
     { name: 'Početna', path: '/', icon: '🏠' },
     { name: 'Obavijesti', path: '/notifications', icon: '🔔' },
+    { name: 'Poruke', path: '/messages', icon: '✉️' },
     { 
       name: 'Profil', 
       path: authStore.user ? `/profile/${authStore.user.username}` : '/profile', 
