@@ -5,7 +5,6 @@ import authMiddleware from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 // POST /api/comments - Kreiranje novog komentara
-// authenticateToken osigurava da samo prijavljeni korisnici mogu komentirati
 router.post('/', authMiddleware, createComment);
 
 export default router;

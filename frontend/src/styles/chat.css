@@ -8,14 +8,28 @@
     background: #fff;
     border-left: 1px solid #eff3f4;
     border-right: 1px solid #eff3f4;
+    position: relative;
 }
 
+/* Header s blur efektom kao na pravoj aplikaciji */
 .chat-header {
     display: flex;
     align-items: center;
     padding: 10px 16px;
     border-bottom: 1px solid #eff3f4;
     gap: 20px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.chat-header h3 {
+    font-size: 19px;
+    font-weight: 800;
+    margin: 0;
+    color: #0f1419;
 }
 
 .back-btn {
@@ -23,7 +37,11 @@
     border: none;
     font-size: 20px;
     cursor: pointer;
-    padding: 5px 10px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
     transition: background 0.2s;
 }
@@ -32,21 +50,33 @@
     background: #e7e7e8;
 }
 
-/* Prostor za poruke sa skrolanjem */
+/* Prostor za poruke */
 .chat-messages-area {
     flex: 1;
     padding: 16px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 4px; /* Razmak između mjehurića */
+    gap: 4px; 
+    /* Custom scrollbar za moderniji izgled */
+    scrollbar-width: thin;
+    scrollbar-color: #ced4da transparent;
+}
+
+/* Chrome, Edge, Safari scrollbar */
+.chat-messages-area::-webkit-scrollbar {
+    width: 6px;
+}
+.chat-messages-area::-webkit-scrollbar-thumb {
+    background-color: #ced4da;
+    border-radius: 10px;
 }
 
 /* Mjehurići poruka */
 .message-wrapper {
     display: flex;
     width: 100%;
-    margin-bottom: 8px;
+    margin-bottom: 4px; /* Smanjen razmak za prirodniji razgovor */
 }
 
 .message-wrapper.mine {
@@ -56,23 +86,26 @@
 .message-wrapper.theirs {
     justify-content: flex-start;
     gap: 8px;
+    align-items: flex-end; /* Avatar se poravnava s dnom zadnje poruke u nizu */
 }
 
 .message-bubble {
-    padding: 12px 16px;
+    max-width: 70%; /* Da poruke ne idu preko cijelog ekrana */
+    padding: 10px 16px;
     font-size: 15px;
     line-height: 20px;
     word-wrap: break-word;
+    position: relative;
 }
 
-/* Stil za MOJE poruke */
+/* Stil za MOJE poruke (Plave) */
 .mine .message-bubble {
     background-color: #1d9bf0;
     color: #fff;
     border-radius: 20px 20px 2px 20px;
 }
 
-/* Stil za TUĐE poruke */
+/* Stil za TUĐE poruke (Sive) */
 .theirs .message-bubble {
     background-color: #eff3f4;
     color: #0f1419;
@@ -83,7 +116,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    align-self: flex-end;
+    object-fit: cover;
+    margin-bottom: 2px;
 }
 
 /* Donja forma za unos */
@@ -94,6 +128,8 @@
     align-items: center;
     gap: 12px;
     background: #fff;
+    position: sticky;
+    bottom: 0;
 }
 
 .chat-input-form input {
@@ -104,29 +140,36 @@
     padding: 10px 18px;
     font-size: 15px;
     outline: none;
-    transition: border 0.2s;
+    transition: all 0.2s;
 }
 
 .chat-input-form input:focus {
     background-color: #fff;
     border-color: #1d9bf0;
+    box-shadow: 0 0 0 1px #1d9bf0;
 }
 
 .chat-input-form button {
-    background: none;
+    background: #1d9bf0; /* Button sada ima pozadinu za bolji UX */
     border: none;
-    color: #1d9bf0;
-    font-size: 20px;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.1s;
+    transition: background 0.2s, transform 0.1s;
 }
 
 .chat-input-form button:disabled {
-    color: #8ecdf8;
+    background: #8ecdf8;
     cursor: default;
+}
+
+.chat-input-form button:hover:not(:disabled) {
+    background: #1a8cd8;
 }
 
 .chat-input-form button:active:not(:disabled) {
