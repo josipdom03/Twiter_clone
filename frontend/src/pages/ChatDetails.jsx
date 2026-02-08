@@ -74,18 +74,19 @@ const ChatDetail = observer(() => {
                 })}
                 <div ref={messagesEndRef} />
             </div>
-
-            <form className="chat-input-form" onSubmit={handleSend}>
-                <input 
-                    type="text" 
-                    placeholder="Napiši poruku..." 
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                />
-                <button type="submit" disabled={!text.trim()}>
-                    ➤
-                </button>
-            </form>
+            <div className="chat-input-container">
+                <form className="chat-input-form" onSubmit={handleSend}>
+                    <input 
+                        type="text" 
+                        placeholder="Napiši poruku..." 
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                    />
+                    <button type="submit" disabled={!text.trim()} className="send-btn">
+                        <span className="send-icon">➤</span>
+                    </button>
+                </form>
+            </div>
         </div>
     );
 });

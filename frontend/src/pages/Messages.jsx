@@ -64,10 +64,18 @@ const Messages = observer(() => {
                                         @{conv.otherUser.username}
                                     </span>
                                 </div>
-                                <p className="last-message">
-                                    {/* Prikazuje samo zadnju poruku u listi za tog korisnika */}
-                                    {conv.content.length > 40 ? conv.content.substring(0, 40) + "..." : conv.content}
-                                </p>
+                                    <p className="last-message">
+                                    {/* Provjera je li trenutni korisnik poslao poruku */}
+                                    {conv.senderId === authStore.user?.id && (
+                                        <span style={{ color: '#536471', fontWeight: '500' }}>Vi: </span>
+                                    )}
+                                    
+                                    {/* Skraćivanje teksta poruke */}
+                                    {conv.content.length > 40 
+                                        ? conv.content.substring(0, 40) + "..." 
+                                        : conv.content
+                                    }
+                                    </p>
                             </div>
                         </div>
                     ))

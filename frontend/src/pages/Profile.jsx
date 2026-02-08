@@ -141,11 +141,11 @@ const Profile = observer(() => {
                     <div className="action-buttons-wrapper">
                         {/* GUMB ZA PORUKU */}
                         <button 
-                            className="message-icon-btn" 
+                            className="message-btn-large" 
                             onClick={() => navigate(`/messages/${p.id}`)}
-                            title="Pošalji poruku"
                         >
-                            ✉️
+                            <span className="msg-icon">✉️</span>
+                            <span className="msg-text">Pošalji poruku</span>
                         </button>
                         
                         <button className="follow-btn">Prati</button>

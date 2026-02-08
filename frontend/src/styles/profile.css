@@ -265,3 +265,58 @@
     font-size: 24px;
     filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
 }
+
+
+/*Gumb za slanje poruka*/ 
+
+.message-btn-large {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #0076c4;
+    border: 1px solid #000000;
+    padding: 8px 20px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    height: 38px;
+}
+
+.message-btn-large:hover {
+    background-color: #00ff42;
+    border-color: #f4212e;
+}
+
+/* Stil za ikonu pisma */
+.msg-icon {
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+}
+
+/* Stil za tekst "Pošalji poruku" */
+.msg-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* Prilagodba akcija da sve stoji u ravnini */
+.action-buttons-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Osiguraj da gumb za praćenje ostane crn i uočljiv pored poruke */
+.follow-btn {
+    background-color: #0f1419;
+    color: #ffffff;
+    border: none;
+    padding: 8px 20px;
+    height: 38px;
+}
+
+.follow-btn:hover {
+    background-color: #272c30;
+}
