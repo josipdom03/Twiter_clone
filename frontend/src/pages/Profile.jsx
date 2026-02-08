@@ -123,22 +123,36 @@ const Profile = observer(() => {
                     </div>
                     
                     <div className="profile-actions">
-                        {isMyProfile ? (
-                            !isEditing ? (
-                                <button className="edit-btn" onClick={() => setIsEditing(true)}>Uredi profil</button>
-                            ) : (
-                                <div className="edit-buttons-gap">
-                                    <button className="cancel-btn" onClick={() => {
-                                        setIsEditing(false);
-                                        setPreviewUrl(p.avatar); // Vrati staru sliku na odustani
-                                    }}>Odustani</button>
-                                    <button className="save-btn" onClick={handleUpdate}>Spremi</button>
-                                </div>
-                            )
-                        ) : (
-                            authStore.isAuthenticated && <button className="follow-btn">Prati</button>
-                        )}
+    {isMyProfile ? (
+        !isEditing ? (
+            <button className="edit-btn" onClick={() => setIsEditing(true)}>Uredi profil</button>
+        ) : (
+            <div className="edit-buttons-gap">
+                <button className="cancel-btn" onClick={() => {
+                    setIsEditing(false);
+                    setPreviewUrl(p.avatar);
+                }}>Odustani</button>
+                <button className="save-btn" onClick={handleUpdate}>Spremi</button>
+            </div>
+                )
+            ) : (
+                /* AKO NIJE MOJ PROFIL, PRIKAŽI PRATI I PORUKU */
+                authStore.isAuthenticated && (
+                    <div className="action-buttons-wrapper">
+                        {/* GUMB ZA PORUKU */}
+                        <button 
+                            className="message-icon-btn" 
+                            onClick={() => navigate(`/messages/${p.id}`)}
+                            title="Pošalji poruku"
+                        >
+                            ✉️
+                        </button>
+                        
+                        <button className="follow-btn">Prati</button>
                     </div>
+                )
+            )}
+</div>
 
                     <div className="profile-info">
                         {!isEditing ? (

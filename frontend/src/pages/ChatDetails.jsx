@@ -3,21 +3,28 @@ import { observer } from 'mobx-react-lite';
 import { useParams, useNavigate } from 'react-router-dom';
 import { messageStore } from '../stores/MessageStore';
 import { authStore } from '../stores/AuthStore';
+import { runInAction } from 'mobx';
 import '../styles/chat.css';
 
 const ChatDetail = observer(() => {
     const { userId } = useParams();
     const navigate = useNavigate();
     const [text, setText] = useState("");
-    const messagesEndRef = useRef(null); // Za automatski scroll na dno
+    const messagesEndRef = useRef(null);
 
-    // Automatski scroll na dno liste kada stigne nova poruka
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
     useEffect(() => {
         messageStore.fetchChat(userId);
+        
+        // Čišćenje aktivnog chata pri odlasku s komponente ili promjeni korisnika
+        return () => {
+            runInAction(() => {
+                messageStore.activeChat = [];
+            });
+        };
     }, [userId]);
 
     useEffect(() => {
@@ -28,8 +35,12 @@ const ChatDetail = observer(() => {
         e.preventDefault();
         if (!text.trim()) return;
 
-        await messageStore.sendMessage(userId, text);
-        setText("");
+        try {
+            await messageStore.sendMessage(userId, text);
+            setText("");
+        } catch (err) {
+            alert("Slanje poruke nije uspjelo.");
+        }
     };
 
     return (
@@ -41,10 +52,20 @@ const ChatDetail = observer(() => {
 
             <div className="chat-messages-area">
                 {messageStore.activeChat.map((msg) => {
-                    const isMine = msg.senderId === authStore.user.id;
+                    // SIGURNA PROVJERA: Koristimo ?.id i osiguravamo da user postoji
+                    const isMine = msg.senderId === authStore.user?.id;
+                    
                     return (
                         <div key={msg.id} className={`message-wrapper ${isMine ? 'mine' : 'theirs'}`}>
-                            {!isMine && <img src={msg.Sender?.avatar} className="mini-avatar" />}
+                            {/* Avatar se prikazuje samo za tuđe poruke */}
+                            {!isMine && (
+                                <img 
+                                    src={msg.Sender?.avatar || '/default-avatar.png'} 
+                                    className="mini-avatar" 
+                                    alt="avatar"
+                                    onError={(e) => e.target.src = '/default-avatar.png'}
+                                />
+                            )}
                             <div className="message-bubble">
                                 {msg.content}
                             </div>

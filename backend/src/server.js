@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import sequelize from './config/database.js';
-
-// --- NOVI IMPORTI ZA SOCKET.IO ---
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+// Importi ruta
 import './models/index.js'; 
-
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import tweetRoutes from './routes/tweetRoutes.js';
@@ -16,46 +16,49 @@ import commentRoutes from './routes/commentRoutes.js';
 import likeRoutes from './routes/likeRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 dotenv.config();
 
 const app = express();
-
-// --- 1. KREIRANJE HTTP SERVERA I SOCKET.IO INSTANCE ---
 const httpServer = createServer(app);
+
+// --- 1. POBOLJŠANA SOCKET.IO KONFIGURACIJA ---
 const io = new Server(httpServer, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+    allowedHeaders: ["my-custom-header"], // Pomaže kod nekih proxy problema
+  },
+  transports: ['websocket', 'polling'] // Eksplicitno navodimo protokole
 });
 
 // --- 2. SOCKET LOGIKA ---
 io.on('connection', (socket) => {
-  console.log('Korisnik spojen na socket:', socket.id);
+  console.log('Korisnik spojen:', socket.id);
 
-  // Soba za svakog korisnika (npr. user_5)
   socket.on('join', (userId) => {
-    socket.join(`user_${userId}`);
-    console.log(`Korisnik ${userId} se pridružio svojoj sobi.`);
+    if (userId) {
+      socket.join(`user_${userId}`);
+      console.log(`Korisnik ${userId} ušao u sobu: user_${userId}`);
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('Korisnik se odspojio.');
+    console.log('Korisnik odspojen:', socket.id);
   });
 });
 
 // --- MIDDLEWARES ---
 
+// Postavi CORS middleware PRIJE ruta
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true
 }));
 
-// Prosljeđujemo io u svaki request kako bi kontroleri mogli emitirati evente
+app.use(express.json());
+
+// Prosljeđujemo io u svaki request
 app.use((req, res, next) => {
   req.io = io;
   next();
@@ -63,12 +66,12 @@ app.use((req, res, next) => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Ispravljena putanja za uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-app.use(express.json());
-
+// Debug logger
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
@@ -84,16 +87,14 @@ app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');
 });
 
-// --- 3. START SERVERA (KORISTIMO httpServer) ---
-
+// --- 3. START SERVERA ---
 const PORT = process.env.PORT || 3000;
 
 sequelize.sync({ alter: true })
   .then(() => {
-    console.log('MySQL tablice su sinkronizirane.');
-    // VAŽNO: httpServer.listen umjesto app.listen
+    console.log('MySQL tablice sinkronizirane.');
     httpServer.listen(PORT, () => {
-      console.log(`Server radi na portu ${PORT} s WebSocket podrškom`);
+      console.log(`Server radi na portu ${PORT}`);
     });
   })
   .catch(err => {
