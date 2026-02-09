@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../stores/AuthStore';
-import axios from 'axios'; // Koristimo axios radi konzistentnosti
+import axios from 'axios';
 import '../styles/tweetDetail.css';
 
 const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
@@ -18,7 +18,9 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
 
     const fetchFreshTweetData = async () => {
         try {
-            const response = await axios.get(`http://localhost:3000/api/tweets/${initialTweet.id}`);
+            const response = await axios.get(`http://localhost:3000/api/tweets/${initialTweet.id}`, {
+                headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+            });
             setTweet(response.data);
             setComments(response.data.Comments || []);
         } catch (error) {
@@ -26,91 +28,61 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
         }
     };
 
-    // Lajkanje glavnog tweeta u modalu
-    const handleLikeMainTweet = async () => {
-        if (!authStore.isAuthenticated || !authStore.user?.id) {
-            return alert("Moraš biti prijavljen za lajkanje!");
-        }
+    const handleFollowFromModal = async () => {
+        if (!authStore.isAuthenticated) return alert("Prijavi se!");
+        const userId = tweet.User?.id;
+        const isCurrentlyFollowing = tweet.User?.isFollowing;
 
         try {
-            const res = await axios.post(
-                `http://localhost:3000/api/likes/tweet/${tweet.id}/like`,
-                {},
-                { headers: { Authorization: `Bearer ${authStore.token}` } }
-            );
-
-            const isLiked = res.data.liked;
-            const currentLikes = tweet.LikedByUsers || [];
-
-            setTweet({
-                ...tweet,
-                LikedByUsers: isLiked 
-                    ? [...currentLikes, { id: authStore.user.id }] 
-                    : currentLikes.filter(u => u.id !== authStore.user.id)
-            });
+            if (isCurrentlyFollowing) {
+                await axios.delete(`http://localhost:3000/api/users/${userId}/unfollow`, {
+                    headers: { Authorization: `Bearer ${authStore.token}` }
+                });
+            } else {
+                await axios.post(`http://localhost:3000/api/users/${userId}/follow`, {}, {
+                    headers: { Authorization: `Bearer ${authStore.token}` }
+                });
+            }
+            fetchFreshTweetData(); // Osvježava isFollowing status
         } catch (err) {
-            console.error("Greška pri lajkanju tweeta:", err);
+            console.error("Greška kod praćenja u modalu:", err);
         }
+    };
+
+    const handleLikeMainTweet = async () => {
+        if (!authStore.isAuthenticated || !authStore.user?.id) return alert("Moraš biti prijavljen!");
+        try {
+            const res = await axios.post(`http://localhost:3000/api/likes/tweet/${tweet.id}/like`, {}, 
+                { headers: { Authorization: `Bearer ${authStore.token}` } });
+            fetchFreshTweetData();
+        } catch (err) { console.error(err); }
     };
 
     const handlePostComment = async () => {
-        if (!authStore.isAuthenticated) return alert("Prijavi se!");
-        if (!commentText.trim()) return;
-
+        if (!authStore.isAuthenticated || !commentText.trim()) return;
         setLoading(true);
         try {
-            const response = await axios.post('http://localhost:3000/api/comments', 
+            await axios.post('http://localhost:3000/api/comments', 
                 { content: commentText, tweetId: tweet.id },
                 { headers: { Authorization: `Bearer ${authStore.token}` } }
             );
-
-            const commentWithUser = {
-                ...response.data,
-                User: { 
-                    username: authStore.user.username, 
-                    displayName: authStore.user.displayName,
-                    avatar: authStore.user.avatar 
-                },
-                LikedByUsers: []
-            };
-            setComments(prev => [commentWithUser, ...prev]);
             setCommentText('');
-        } catch (error) {
-            console.error("Greška:", error);
-        } finally {
-            setLoading(false);
-        }
+            fetchFreshTweetData();
+        } catch (error) { console.error(error); } finally { setLoading(false); }
     };
 
     const handleLikeComment = async (commentId) => {
-        if (!authStore.isAuthenticated || !authStore.user?.id) return;
-
+        if (!authStore.isAuthenticated) return;
         try {
-            const res = await axios.post(`http://localhost:3000/api/likes/comment/${commentId}/like`, 
-                {}, 
-                { headers: { Authorization: `Bearer ${authStore.token}` } }
-            );
-            
-            setComments(prev => prev.map(c => {
-                if (c.id === commentId) {
-                    const currentLikes = c.LikedByUsers || [];
-                    return {
-                        ...c,
-                        LikedByUsers: res.data.liked 
-                            ? [...currentLikes, { id: authStore.user.id }] 
-                            : currentLikes.filter(u => u.id !== authStore.user.id)
-                    };
-                }
-                return c;
-            }));
-        } catch (err) {
-            console.error(err);
-        }
+            await axios.post(`http://localhost:3000/api/likes/comment/${commentId}/like`, {}, 
+                { headers: { Authorization: `Bearer ${authStore.token}` } });
+            fetchFreshTweetData();
+        } catch (err) { console.error(err); }
     };
 
     if (!tweet) return null;
-
     const isTweetLiked = tweet.LikedByUsers?.some(u => u.id === authStore.user?.id);
+    const isOwnTweet = authStore.user?.id === tweet.User?.id;
 
     return (
         <div className="tweet-modal-overlay" onClick={onClose}>
@@ -118,36 +90,38 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                 <button className="close-modal-btn" onClick={onClose}>&times;</button>
                 <div className="modal-scroll-area">
                     
-                    <div className="modal-tweet-header">
-                        <img src={tweet.User?.avatar || '/default-avatar.png'} alt="avatar" className="modal-avatar" />
-                        <div className="modal-user-info">
-                            <span className="modal-display-name">{tweet.User?.displayName}</span>
-                            <span className="modal-username">@{tweet.User?.username}</span>
+                    <div className="modal-tweet-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <img src={tweet.User?.avatar || '/default-avatar.png'} alt="avatar" className="modal-avatar" />
+                            <div className="modal-user-info">
+                                <span className="modal-display-name">{tweet.User?.displayName}</span>
+                                <span className="modal-username">@{tweet.User?.username}</span>
+                            </div>
                         </div>
+
+                        {/* GUMB ZA PRAĆENJE U MODALU */}
+                        {authStore.isAuthenticated && !isOwnTweet && (
+                            <button 
+                                className={`modal-follow-btn-small ${tweet.User?.isFollowing ? 'following' : ''}`}
+                                onClick={handleFollowFromModal}
+                            >
+                                {tweet.User?.isFollowing ? 'Pratim' : 'Prati'}
+                            </button>
+                        )}
                     </div>
 
                     <div className="modal-tweet-body">
                         <p className="modal-tweet-text">{tweet.content}</p>
-                        <div className="modal-date-footer">
-                            {new Date(tweet.createdAt).toLocaleString()}
-                        </div>
+                        <div className="modal-date-footer">{new Date(tweet.createdAt).toLocaleString()}</div>
                     </div>
 
-                    {/* NOVO: Akcije za glavni tweet (Lajk i Broj komentara) */}
                     <div className="modal-main-actions">
-                        <span className="action-stat">
-                            <strong>{comments.length}</strong> Odgovora
-                        </span>
-                        <span className="action-stat">
-                            <strong>{tweet.LikedByUsers?.length || 0}</strong> Lajkova
-                        </span>
+                        <span className="action-stat"><strong>{comments.length}</strong> Odgovora</span>
+                        <span className="action-stat"><strong>{tweet.LikedByUsers?.length || 0}</strong> Lajkova</span>
                     </div>
 
                     <div className="modal-action-buttons">
-                        <button 
-                            className={`modal-like-btn ${isTweetLiked ? 'active' : ''}`}
-                            onClick={handleLikeMainTweet}
-                        >
+                        <button className={`modal-like-btn ${isTweetLiked ? 'active' : ''}`} onClick={handleLikeMainTweet}>
                             {isTweetLiked ? '❤️ Liked' : '🤍 Like'}
                         </button>
                     </div>
@@ -158,11 +132,7 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                         <div className="comment-input-section">
                             <img src={authStore.user?.avatar || "/default-avatar.png"} className="comment-avatar-small" alt="" />
                             <div className="comment-input-controls">
-                                <textarea 
-                                    placeholder="Objavi svoj odgovor" 
-                                    value={commentText}
-                                    onChange={(e) => setCommentText(e.target.value)}
-                                />
+                                <textarea placeholder="Objavi svoj odgovor" value={commentText} onChange={(e) => setCommentText(e.target.value)} />
                                 <button className="post-comment-btn" disabled={!commentText.trim() || loading} onClick={handlePostComment}>
                                     {loading ? '...' : 'Odgovori'}
                                 </button>
@@ -183,10 +153,7 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                                         </div>
                                         <p className="comment-text">{comment.content}</p>
                                         <div className="comment-actions">
-                                            <span 
-                                                className={`c-like-btn ${isCommentLiked ? 'active' : ''}`}
-                                                onClick={() => handleLikeComment(comment.id)}
-                                            >
+                                            <span className={`c-like-btn ${isCommentLiked ? 'active' : ''}`} onClick={() => handleLikeComment(comment.id)}>
                                                 {isCommentLiked ? '❤️' : '🤍'} {comment.LikedByUsers?.length || 0}
                                             </span>
                                         </div>

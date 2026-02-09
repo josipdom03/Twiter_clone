@@ -320,3 +320,52 @@
 .follow-btn:hover {
     background-color: #272c30;
 }
+
+/* --- DINAMIČNI FOLLOW/UNFOLLOW GUMB --- */
+
+/* Osnovni stil za gumb kad već pratiš (bijeli s crnim obrubom) */
+.follow-btn.following {
+    background-color: #ffffff;
+    color: #0f1419;
+    border: 1px solid #cfd9de;
+    width: 110px; /* Fiksna širina da gumb ne skače kad se tekst mijenja */
+    padding: 0; /* Resetiramo padding zbog unutarnjih spanova */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Tekst koji se vidi normalno */
+.text-following {
+    display: block;
+}
+
+/* Tekst koji se vidi samo na hover */
+.text-unfollow {
+    display: none;
+}
+
+/* HOVER STANJE: Gumb postaje crven i mijenja tekst */
+.follow-btn.following:hover {
+    background-color: rgba(244, 33, 46, 0.1); /* Blaga crvena pozadina */
+    border-color: #fdc9ce;
+    color: #f4212e; /* Crveni tekst */
+}
+
+.follow-btn.following:hover .text-following {
+    display: none;
+}
+
+.follow-btn.following:hover .text-unfollow {
+    display: block;
+}
+
+/* Gumb za PRAĆENJE (kad još ne pratiš) - skroz crni */
+.follow-btn.follow-black {
+    background-color: #0f1419;
+    color: #ffffff;
+    border: none;
+}
+
+.follow-btn.follow-black:hover {
+    background-color: #272c30;
+}

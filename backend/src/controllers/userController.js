@@ -1,4 +1,4 @@
-import { User, Tweet } from '../models/index.js'; // Uvozimo iz index.js zbog relacija
+import { User, Tweet } from '../models/index.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -22,31 +22,30 @@ export const upload = multer({
 
 // --- KONTROLER FUNKCIJE ---
 
-/**
- * 1. Dohvaćanje vlastitog profila + TWEETOVI
- */
 export const getProfile = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
             attributes: { exclude: ['password', 'verificationToken'] },
-            include: [{
-                model: Tweet,
-                as: 'Tweets',
-                attributes: ['id', 'content', 'image', 'createdAt']
-            }],
+            include: [
+                { model: Tweet, as: 'Tweets', attributes: ['id', 'content', 'image', 'createdAt'] },
+                { model: User, as: 'Followers', attributes: ['id'] },
+                { model: User, as: 'Following', attributes: ['id'] }
+            ],
             order: [[ { model: Tweet, as: 'Tweets' }, 'createdAt', 'DESC' ]]
         });
 
         if (!user) return res.status(404).json({ message: 'Korisnik nije pronađen' });
-        res.json(user);
+        
+        const userData = user.toJSON();
+        userData.followersCount = user.Followers?.length || 0;
+        userData.followingCount = user.Following?.length || 0;
+
+        res.json(userData);
     } catch (error) {
         res.status(500).json({ message: 'Greška pri dohvaćanju profila', error: error.message });
     }
 };
 
-/**
- * 2. Ažuriranje profila 
- */
 export const updateProfile = async (req, res) => {
     try {
         const { bio, username, displayName } = req.body;
@@ -78,28 +77,99 @@ export const updateProfile = async (req, res) => {
     }
 };
 
-/**
- * 3. Dohvaćanje tuđeg profila po username-u + TWEETOVI
- */
 export const getUserByUsername = async (req, res) => {
     try {
         const { username } = req.params;
-        if (!username || username === 'undefined') return res.status(400).json({ message: 'Nevažeći username' });
+        const currentUserId = req.user?.id; 
 
         const user = await User.findOne({
             where: { username },
             attributes: ['id', 'username', 'displayName', 'avatar', 'bio', 'createdAt'],
-            include: [{
-                model: Tweet,
-                as: 'Tweets',
-                attributes: ['id', 'content', 'image', 'createdAt']
-            }],
+            include: [
+                { model: Tweet, as: 'Tweets', attributes: ['id', 'content', 'image', 'createdAt'] },
+                { model: User, as: 'Followers', attributes: ['id', 'username'] },
+                { model: User, as: 'Following', attributes: ['id', 'username'] }
+            ],
             order: [[ { model: Tweet, as: 'Tweets' }, 'createdAt', 'DESC' ]]
         });
 
         if (!user) return res.status(404).json({ message: 'Korisnik nije pronađen' });
-        res.json(user);
+
+        const userData = user.toJSON();
+        userData.followersCount = user.Followers?.length || 0;
+        userData.followingCount = user.Following?.length || 0;
+        userData.isFollowing = user.Followers.some(f => f.id === currentUserId);
+
+        res.json(userData);
     } catch (error) {
         res.status(500).json({ message: 'Greška na serveru', error: error.message });
+    }
+};
+
+/**
+ * 4. Zapratite korisnika + WEBSOCKET
+ */
+export const followUser = async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+        const targetUserId = req.params.id;
+
+        if (currentUserId == targetUserId) {
+            return res.status(400).json({ message: 'Ne možete pratiti sami sebe' });
+        }
+
+        const userToFollow = await User.findByPk(targetUserId);
+        const currentUser = await User.findByPk(currentUserId);
+
+        if (!userToFollow) return res.status(404).json({ message: 'Korisnik nije pronađen' });
+
+        await currentUser.addFollowing(userToFollow);
+
+        // Dohvaćamo novi broj pratitelja nakon akcije
+        const followersCount = await userToFollow.countFollowers();
+
+        // SLANJE PREKO WEBSOCKETA
+        // Koristimo req.io koji smo postavili u server.js
+        if (req.io) {
+            req.io.emit('update_followers', {
+                userId: targetUserId,
+                followersCount: followersCount
+            });
+        }
+
+        res.json({ message: 'Uspješno zapraćeno', followersCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Greška pri praćenju korisnika', error: error.message });
+    }
+};
+
+/**
+ * 5. Otpratite korisnika + WEBSOCKET
+ */
+export const unfollowUser = async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+        const targetUserId = req.params.id;
+
+        const currentUser = await User.findByPk(currentUserId);
+        const userToUnfollow = await User.findByPk(targetUserId);
+
+        if (!userToUnfollow) return res.status(404).json({ message: 'Korisnik nije pronađen' });
+
+        await currentUser.removeFollowing(userToUnfollow);
+
+        const followersCount = await userToUnfollow.countFollowers();
+
+        // SLANJE PREKO WEBSOCKETA
+        if (req.io) {
+            req.io.emit('update_followers', {
+                userId: targetUserId,
+                followersCount: followersCount
+            });
+        }
+
+        res.json({ message: 'Uspješno otpraćeno', followersCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Greška pri otpraćivanju', error: error.message });
     }
 };

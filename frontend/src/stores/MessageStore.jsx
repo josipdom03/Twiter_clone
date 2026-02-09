@@ -1,11 +1,13 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import axios from "axios";
 import socket from "../socket";
-import { authStore } from "./AuthStore"; // Uvezi authStore da možemo dohvatiti token
+import { authStore } from "./AuthStore";
+import { userStore } from "./UserStore"; 
 
 class MessageStore {
-    conversations = []; // Za MessagesPage (lista ljudi)
-    activeChat = [];    // Za ChatDetail (poruke unutar jednog chata)
+    conversations = []; 
+    activeChat = [];    
+    interlocutor = null; 
     isLoading = false;
 
     constructor() {
@@ -14,48 +16,75 @@ class MessageStore {
     }
 
     setupSocket() {
-        // Važno: Očisti stare listenere da se poruke ne duplaju pri re-renderu
         socket.off('receive_message'); 
-        
         socket.on('receive_message', (msg) => {
             runInAction(() => {
-                // Provjera: Dodajemo u activeChat samo ako je poruka dio trenutnog razgovora
-                // msg.senderId je osoba koja šalje, msg.recipientId si ti
-                // Ili obrnuto ako si ti poslao s drugog uređaja
-                this.activeChat.push(msg);
-                
-                // Osvježi listu razgovora da se ažurira snippet zadnje poruke
+                // Dodajemo poruku samo ako pripada otvorenom chatu
+                // Provjeravamo oba smjera (da smo mi poslali ili da smo primili u ovaj chat)
+                const isRelevant = 
+                    (String(msg.senderId) === String(this.interlocutor?.id)) || 
+                    (String(msg.recipientId) === String(this.interlocutor?.id) && String(msg.senderId) === String(authStore.user?.id));
+
+                if (this.activeChat && isRelevant) {
+                    const exists = this.activeChat.some(m => m.id === msg.id);
+                    if (!exists) {
+                        this.activeChat.push(msg);
+                    }
+                }
                 this.fetchConversations(); 
             });
         });
     }
 
-    // Pomoćna funkcija za headere (da ne pišemo stalno isto)
     get config() {
         return {
             headers: { Authorization: `Bearer ${authStore.token}` }
         };
     }
 
-    // 1. Dohvaća listu svih ljudi s kojima pričamo
     async fetchConversations() {
         try {
             const res = await axios.get("http://localhost:3000/api/message/conversations", this.config);
             runInAction(() => { 
                 this.conversations = res.data; 
             });
+            return res.data;
         } catch (err) {
             console.error("Greška pri dohvaćanju razgovora:", err);
         }
     }
 
-    // 2. Dohvaća poruke samo s jednom osobom
     async fetchChat(userId) {
         this.isLoading = true;
         try {
             const res = await axios.get(`http://localhost:3000/api/message/${userId}`, this.config);
+            
             runInAction(() => {
-                this.activeChat = res.data;
+                this.activeChat = res.data; 
+
+                // 1. POKUŠAJ: Nađi sugovornika u listi konverzacija
+                const conversation = this.conversations.find(c => 
+                    String(c.Participant1Id) === String(userId) || 
+                    String(c.Participant2Id) === String(userId)
+                );
+
+                if (conversation) {
+                    this.interlocutor = String(conversation.Participant1Id) === String(userId) 
+                        ? conversation.Participant1 
+                        : conversation.Participant2;
+                } 
+                
+                // 2. POKUŠAJ (Fallback): Ako ga nema u konverzacijama, izvuci ga iz poruke
+                // Gledamo poruku gdje je Sender objekt prisutan i ID se poklapa
+                if (!this.interlocutor && this.activeChat.length > 0) {
+                    const msgWithSender = this.activeChat.find(m => 
+                        m.Sender && String(m.senderId) === String(userId)
+                    );
+                    if (msgWithSender) {
+                        this.interlocutor = msgWithSender.Sender;
+                    }
+                }
+
                 this.isLoading = false;
             });
         } catch (err) {
@@ -64,7 +93,6 @@ class MessageStore {
         }
     }
 
-    // 3. NOVO: Slanje poruke
     async sendMessage(recipientId, content) {
         try {
             const res = await axios.post(
@@ -73,15 +101,14 @@ class MessageStore {
                 this.config
             );
 
-            // Socket na backendu bi trebao emitirati poruku, 
-            // ali je možemo i ručno dodati ovdje radi bržeg UI-ja (optimistic update)
             runInAction(() => {
-                // Provjeravamo da je ne dodamo dvaput ako socket odmah vrati
-                const exists = this.activeChat.some(m => m.id === res.data.id);
-                if (!exists) {
-                    this.activeChat.push(res.data);
+                if (this.activeChat) {
+                    const exists = this.activeChat.some(m => m.id === res.data.id);
+                    if (!exists) {
+                        this.activeChat.push(res.data);
+                    }
                 }
-                this.fetchConversations(); // Ažuriraj listu sa strane
+                this.fetchConversations();
             });
 
             return res.data;
@@ -89,6 +116,13 @@ class MessageStore {
             console.error("Greška pri slanju poruke:", err);
             throw err;
         }
+    }
+
+    clearActiveChat() {
+        runInAction(() => {
+            this.activeChat = [];
+            this.interlocutor = null;
+        });
     }
 }
 

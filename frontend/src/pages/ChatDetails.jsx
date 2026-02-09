@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { useParams, useNavigate } from 'react-router-dom';
 import { messageStore } from '../stores/MessageStore';
 import { authStore } from '../stores/AuthStore';
+import { userStore } from '../stores/UserStore';
 import { runInAction } from 'mobx';
 import '../styles/chat.css';
 
@@ -17,24 +18,35 @@ const ChatDetail = observer(() => {
     };
 
     useEffect(() => {
-        messageStore.fetchChat(userId);
-        
-        // Čišćenje aktivnog chata pri odlasku s komponente ili promjeni korisnika
+        const loadChatData = async () => {
+            // 1. Ako nema konverzacija (npr. direktan refresh stranice), dohvati ih
+            // jer nam trebaju podaci o sugovorniku (ime, avatar) koji su tamo
+            if (messageStore.conversations.length === 0) {
+                await messageStore.fetchConversations();
+            }
+            
+            // 2. Dohvati poruke za ovaj chat
+            await messageStore.fetchChat(userId);
+        };
+
+        loadChatData();
+
+        // Čišćenje pri izlasku iz komponente
         return () => {
-            runInAction(() => {
-                messageStore.activeChat = [];
-            });
+            messageStore.clearActiveChat();
         };
     }, [userId]);
 
+    // Automatsko scrollanje na dno kada stigne nova poruka
     useEffect(() => {
-        scrollToBottom();
-    }, [messageStore.activeChat.length]);
+        if (messageStore.activeChat?.length > 0) {
+            scrollToBottom();
+        }
+    }, [messageStore.activeChat?.length]);
 
     const handleSend = async (e) => {
         e.preventDefault();
         if (!text.trim()) return;
-
         try {
             await messageStore.sendMessage(userId, text);
             setText("");
@@ -43,24 +55,55 @@ const ChatDetail = observer(() => {
         }
     };
 
+    // Koristimo interlocutor iz messageStore-a koji smo postavili u fetchChat
+    const peer = messageStore.interlocutor;
+
     return (
         <div className="chat-detail">
             <div className="chat-header">
                 <button className="back-btn" onClick={() => navigate('/messages')}>←</button>
-                <h3>Razgovor</h3>
+                
+                {peer ? (
+                    <div className="chat-user-info" onClick={() => navigate(`/profile/${peer.username}`)}>
+                        <img 
+                            src={peer.avatar || '/default-avatar.png'} 
+                            className="header-mini-avatar" 
+                            alt="avatar" 
+                        />
+                        <div className="user-text-details">
+                            <span className="user-full-name">{peer.displayName || peer.username}</span>
+                            <div className="follow-status-mini">
+                                {peer.isFollowing ? (
+                                    <span className="following-tag">✓ Pratiš</span>
+                                ) : (
+                                    <button 
+                                        className="mini-follow-btn" 
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Spriječi navigaciju na profil
+                                            userStore.handleFollow(peer.id);
+                                        }}
+                                    >
+                                        Prati
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="chat-user-info">
+                        <span className="user-full-name">Učitavanje...</span>
+                    </div>
+                )}
             </div>
 
             <div className="chat-messages-area">
-                {messageStore.activeChat.map((msg) => {
-                    // SIGURNA PROVJERA: Koristimo ?.id i osiguravamo da user postoji
+                {messageStore.activeChat?.map((msg) => {
                     const isMine = msg.senderId === authStore.user?.id;
-                    
                     return (
                         <div key={msg.id} className={`message-wrapper ${isMine ? 'mine' : 'theirs'}`}>
-                            {/* Avatar se prikazuje samo za tuđe poruke */}
                             {!isMine && (
                                 <img 
-                                    src={msg.Sender?.avatar || '/default-avatar.png'} 
+                                    src={peer?.avatar || '/default-avatar.png'} 
                                     className="mini-avatar" 
                                     alt="avatar"
                                     onError={(e) => e.target.src = '/default-avatar.png'}
@@ -74,6 +117,7 @@ const ChatDetail = observer(() => {
                 })}
                 <div ref={messagesEndRef} />
             </div>
+            
             <div className="chat-input-container">
                 <form className="chat-input-form" onSubmit={handleSend}>
                     <input 

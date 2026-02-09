@@ -151,3 +151,67 @@
     font-size: 16px;
     transform: translateX(1px); /* Optičko centriranje strelice */
 }
+
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #eff3f4;
+    background: #fff;
+    gap: 15px;
+}
+
+.chat-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.chat-user-info:hover .user-full-name {
+    text-decoration: underline;
+}
+
+.header-mini-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-text-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-full-name {
+    font-weight: 800;
+    font-size: 16px;
+    color: #0f1419;
+}
+
+.follow-status-mini {
+    font-size: 12px;
+}
+
+.following-tag {
+    color: #536471;
+}
+
+.mini-follow-btn {
+    background-color: #0f1419;
+    color: white;
+    border: none;
+    border-radius: 999px;
+    padding: 2px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.mini-follow-btn:hover {
+    background-color: #272c30;
+}
