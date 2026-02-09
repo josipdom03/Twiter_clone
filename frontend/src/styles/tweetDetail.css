@@ -240,3 +240,131 @@
 .modal-like-btn.active {
     color: #f91880;
 }
+
+
+/* --- LIKES INTERACTION --- */
+
+.likes-stat-container {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.action-stat.clickable:hover {
+    text-decoration: underline;
+}
+
+/* Tooltip (Hover) */
+.likes-tooltip {
+    position: absolute;
+    bottom: 120%;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 100;
+    min-width: 150px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    pointer-events: none; /* Da ne smeta mišu */
+}
+
+.tooltip-user {
+    padding: 2px 0;
+}
+
+.tooltip-more {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid #444;
+    font-style: italic;
+    color: #bbb;
+}
+
+/* Full Likes Modal (Pop-up) */
+.likes-full-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.likes-full-modal-content {
+    background: white;
+    width: 350px;
+    max-height: 450px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.likes-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid #eff3f4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.likes-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.close-small-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.likes-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.like-user-row {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    transition: background 0.2s;
+    border-radius: 8px;
+}
+
+.like-user-row:hover {
+    background-color: #f7f7f7;
+}
+
+.user-row-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 12px;
+}
+
+.row-display-name {
+    margin: 0;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.row-username {
+    margin: 0;
+    color: #536471;
+    font-size: 14px;
+}
+
+.no-likes {
+    text-align: center;
+    padding: 20px;
+    color: #536471;
+}

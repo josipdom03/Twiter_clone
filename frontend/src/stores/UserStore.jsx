@@ -11,23 +11,23 @@ class UserStore {
     socket = null;
 
     constructor() {
-        // Ovo omogućuje MobX-u da prati promjene i automatski osvježava komponente
         makeAutoObservable(this);
         this.initSocket();
     }
 
     initSocket() {
         if (!this.socket) {
-            this.socket = io("http://localhost:3000", {
-                transports: ['websocket']
+            this.socket = io("http://localhost:3000", { 
+                transports: ['websocket'] 
             });
 
             this.socket.on('update_followers', (data) => {
                 runInAction(() => {
-                    if (this.publicProfile && this.publicProfile.id == data.userId) {
+                    // Koristimo String() jer ID iz baze i ID iz socketa često nisu isti tip (number vs string)
+                    if (this.publicProfile && String(this.publicProfile.id) === String(data.userId)) {
                         this.publicProfile.followersCount = data.followersCount;
                     }
-                    if (this.profile && this.profile.id == data.userId) {
+                    if (this.profile && String(this.profile.id) === String(data.userId)) {
                         this.profile.followersCount = data.followersCount;
                     }
                 });
@@ -35,12 +35,14 @@ class UserStore {
         }
     }
 
+    // KLJUČNO ZA OSVJEŽAVANJE (F5): 
+    // Prvo gledamo localStorage jer se MobX stanje resetira pri refreshu
     getAuthHeaders() {
-        const token = authStore.token || localStorage.getItem("token");
+        const token = localStorage.getItem("token") || authStore.token;
         return token ? { Authorization: `Bearer ${token}` } : {};
     }
 
-    // --- FUNKCIJA KOJA TI JE FALILA ---
+    // Dohvaćanje vlastitog profila (ulogirani korisnik)
     async fetchProfile() {
         const headers = this.getAuthHeaders();
         if (!headers.Authorization) return;
@@ -50,6 +52,7 @@ class UserStore {
             const res = await axios.get("http://localhost:3000/api/users/profile", { headers });
             runInAction(() => {
                 this.profile = res.data;
+                // Sinkronizacija s AuthStore-om ako je potrebno
                 if (!authStore.user) authStore.user = res.data;
             });
         } catch (err) {
@@ -59,16 +62,25 @@ class UserStore {
         }
     }
 
-    // --- FUNKCIJA KOJA TI JE FALILA ---
+    // Dohvaćanje tuđeg (javnog) profila
     async fetchPublicProfile(username) {
+        if (!username) return;
         this.isLoading = true;
+        this.error = null;
         try {
-            const res = await axios.get(`http://localhost:3000/api/users/u/${username}`);
+            // Šaljemo headers čak i za javni profil da backend zna jesmo li "follower"
+            const res = await axios.get(`http://localhost:3000/api/users/u/${username}`, {
+                headers: this.getAuthHeaders()
+            });
+            
             runInAction(() => { 
                 this.publicProfile = res.data; 
             });
         } catch (err) {
-            runInAction(() => { this.error = "Korisnik nije pronađen"; });
+            console.error("fetchPublicProfile Error:", err);
+            runInAction(() => { 
+                this.error = "Korisnik nije pronađen"; 
+            });
         } finally {
             runInAction(() => { this.isLoading = false; });
         }
@@ -81,67 +93,54 @@ class UserStore {
             });
             runInAction(() => {
                 this.profile = res.data;
-                if (authStore.user) authStore.user = { ...authStore.user, ...res.data };
+                if (authStore.user) {
+                    authStore.user = { ...authStore.user, ...res.data };
+                }
             });
             return res.data;
         } catch (err) {
-            throw err.response?.data?.message || "Greška";
+            throw err.response?.data?.message || "Greška pri ažuriranju profila";
         }
     }
 
     handleFollow = async (userId) => {
         try {
-            // Optimistično ažuriranje (UI reagira odmah)
+            // Optimistično ažuriranje UI-ja
             runInAction(() => {
-                if (this.publicProfile && this.publicProfile.id === userId) {
+                if (this.publicProfile && String(this.publicProfile.id) === String(userId)) {
                     this.publicProfile.isFollowing = true;
                     this.publicProfile.followersCount++;
                 }
             });
+
             await axios.post(`http://localhost:3000/api/users/${userId}/follow`, {}, {
                 headers: this.getAuthHeaders()
             });
         } catch (error) {
-            this.fetchPublicProfile(this.publicProfile?.username); // Vrati na staro ako ne uspije
+            console.error("Follow error:", error);
+            // Ako ne uspije, osvježi podatke s backenda da se vrati na staro
+            this.fetchPublicProfile(this.publicProfile?.username);
         }
     };
 
     handleUnfollow = async (userId) => {
         try {
+            // Optimistično ažuriranje UI-ja
             runInAction(() => {
-                if (this.publicProfile && this.publicProfile.id === userId) {
+                if (this.publicProfile && String(this.publicProfile.id) === String(userId)) {
                     this.publicProfile.isFollowing = false;
                     this.publicProfile.followersCount--;
                 }
             });
+
             await axios.delete(`http://localhost:3000/api/users/${userId}/unfollow`, {
                 headers: this.getAuthHeaders()
             });
         } catch (error) {
+            console.error("Unfollow error:", error);
             this.fetchPublicProfile(this.publicProfile?.username);
         }
     };
-
-
-    async fetchPublicProfileById(userId) {
-    this.isLoading = true;
-    this.error = null;
-    try {
-        const res = await axios.get(`http://localhost:3000/api/users/id/${userId}`, {
-            headers: this.getAuthHeaders() // Šaljemo header da backend zna pratim li ga (isFollowing)
-        });
-        runInAction(() => {
-            this.publicProfile = res.data;
-        });
-    } catch (err) {
-        console.error("fetchPublicProfileById Error:", err);
-        runInAction(() => {
-            this.error = "Korisnik nije pronađen";
-        });
-    } finally {
-        runInAction(() => { this.isLoading = false; });
-    }
-}
 }
 
 export const userStore = new UserStore();

@@ -56,26 +56,28 @@ export const getTweetById = async (req, res) => {
       include: [
         { 
           model: User, 
-          attributes: ['username', 'displayName', 'avatar'] 
+          attributes: ['id', 'username', 'displayName', 'avatar'] 
         },
-        // DODANO: Lajkovi za sam tweet
         {
           model: User,
           as: 'LikedByUsers',
-          attributes: ['id']
+          // OVDJE JE PROMJENA: Dodajemo username, displayName i avatar
+          attributes: ['id', 'username', 'displayName', 'avatar'],
+          through: { attributes: [] } // Ovo uklanja nepotrebne podatke iz vezne tablice
         },
         {
           model: Comment,
           include: [
             { 
               model: User, 
-              attributes: ['username', 'displayName', 'avatar'] 
+              attributes: ['id', 'username', 'displayName', 'avatar'] 
             },
-            // DODANO: Lajkovi za svaki komentar unutar tweeta
             {
               model: User,
               as: 'LikedByUsers',
-              attributes: ['id']
+              // I ovdje dodajemo isto ako želiš tooltip na komentarima
+              attributes: ['id', 'username', 'displayName', 'avatar'],
+              through: { attributes: [] }
             }
           ],
           separate: true, 

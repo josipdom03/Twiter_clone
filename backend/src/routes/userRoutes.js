@@ -13,7 +13,7 @@ router.put('/profile', authMiddleware, upload.single('avatar'), updateProfile);
 
 // 2. Javne rute (za pregled tuđih profila)
 // Putanja: GET /api/users/u/:username  <-- DODAN /u/ PREFIKS
-router.get('/u/:username', getUserByUsername);
+router.get('/u/:username',authMiddleware, getUserByUsername);
 
 //Putanja za Prati korisnika
 router.post('/:id/follow', authMiddleware, followUser);
