@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const authMiddleware = (req, res, next) => {
+export const authMiddleware = (req, res, next) => {
   // 1. Uzmi token iz headera (format: "Bearer TOKEN_STRING")
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
@@ -24,4 +24,25 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-export default authMiddleware;
+export const optionalAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    
+    // Ako nema tokena, samo prođi dalje bez req.user
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        req.user = null;
+        return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+        // Ako je token tu, pokušaj ga dekodirati
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+    } catch (error) {
+        // Čak i ako je token neispravan (istekao), nećemo srušiti request, 
+        // samo ćemo tretirati korisnika kao gosta
+        req.user = null;
+    }
+    next();
+};
+

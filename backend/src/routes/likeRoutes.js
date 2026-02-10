@@ -1,6 +1,6 @@
 import express from 'express';
 import {toggleCommentLike,toggleTweetLike}from '../controllers/likeController.js'
-import authMiddleware from '../middleware/authMiddleware.js';
+import {authMiddleware,optionalAuth} from '../middleware/authMiddleware.js';
 
 
 const router = express.Router();

@@ -368,3 +368,51 @@
     padding: 20px;
     color: #536471;
 }
+
+.like-user-row-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.like-user-row-container:hover {
+    background-color: #f7f7f7;
+}
+
+.like-user-row.searchable {
+    display: flex;
+    align-items: center;
+    flex: 1; /* Zauzima sav prostor do gumba */
+    cursor: pointer;
+}
+/* Stil za gumb "Prati" */
+.modal-follow-btn-small {
+    background-color: #000;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* Stil kada već PRATIŠ (isFollowing === true) */
+.modal-follow-btn-small.following {
+    background-color: transparent;
+    color: #000;
+    border: 1px solid #cfd9de;
+}
+
+.modal-follow-btn-small.following:hover {
+    background-color: #ffe9e9;
+    color: #f4212e; /* Crvena boja za "Prestani pratiti" */
+    border-color: #f4c7c7;
+}
+
+/* Dodajemo tekst "Otprati" na hover ako već pratimo */
+.modal-follow-btn-small.following:hover::after {
+    content: ""; /* Možeš ostaviti prazno ili promijeniti tekst putem JS-a */
+}
