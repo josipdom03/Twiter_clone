@@ -11,20 +11,29 @@ import '../styles/profile.css';
 const Profile = observer(() => {
     const { username } = useParams();
     const navigate = useNavigate();
+    
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({ username: '', bio: '', displayName: '' });
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [selectedTweet, setSelectedTweet] = useState(null);
 
+    const [userModal, setUserModal] = useState({
+        isOpen: false,
+        title: '',
+        users: []
+    });
+
     const isMyProfile = !username || (authStore.user && authStore.user.username === username);
     const p = isMyProfile ? userStore.profile : userStore.publicProfile;
 
     useEffect(() => {
         const loadData = async () => {
+            if (!username && !authStore.isAuthenticated) return;
             runInAction(() => { userStore.publicProfile = null; });
+
             if (isMyProfile) {
-                if (authStore.isAuthenticated) await userStore.fetchProfile();
+                await userStore.fetchProfile();
             } else if (username) {
                 await userStore.fetchPublicProfile(username);
             }
@@ -55,21 +64,67 @@ const Profile = observer(() => {
             await userStore.updateProfile(data);
             setIsEditing(false);
             if (formData.username !== username && username) navigate(`/profile/${formData.username}`);
-        } catch (err) { alert("Greška: " + err); }
+        } catch (err) { alert(err); }
     };
 
-    if (userStore.isLoading) return <div className="loader">Učitavanje...</div>;
+    const openUserModal = (type) => {
+        if (!p) return;
+        // Uzimamo liste koje su već formatirane u Storeu
+        const list = type === 'following' ? p.Following : p.Followers;
+        
+        setUserModal({
+            isOpen: true,
+            title: type === 'following' ? 'Prati' : 'Pratitelji',
+            users: list || []
+        });
+    };
+
+    if (userStore.isLoading && !p) return <div className="loader">Učitavanje...</div>;
     if (!p) return <div className="error">Korisnik nije pronađen.</div>;
 
     return (
         <div className="profile-container">
             {selectedTweet && <TweetDetail tweet={selectedTweet} onClose={() => setSelectedTweet(null)} />}
 
+            {userModal.isOpen && (
+                <div className="modal-overlay" onClick={() => setUserModal({ ...userModal, isOpen: false })}>
+                    <div className="users-modal-card" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>{userModal.title}</h3>
+                            <button className="close-x-btn" onClick={() => setUserModal({ ...userModal, isOpen: false })}>✕</button>
+                        </div>
+                        <div className="modal-users-list">
+                            {userModal.users.length > 0 ? userModal.users.map((userData, index) => (
+                                <div key={userData.id || index} className="modal-user-item" onClick={() => {
+                                    setUserModal({ ...userModal, isOpen: false });
+                                    navigate(`/profile/${userData.username}`);
+                                }}>
+                                    <img 
+                                        src={userData.avatar || '/default-avatar.png'} 
+                                        alt="avatar" 
+                                        onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                                    />
+                                    <div className="modal-user-info">
+                                        <span className="m-display">{userData.displayName || userData.username}</span>
+                                        <span className="m-handle">@{userData.username}</span>
+                                    </div>
+                                </div>
+                            )) : <p className="no-data-msg">Nema nikoga za prikaz.</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="profile-card">
                 <div className="profile-banner"></div>
                 <div className="profile-content">
                     <div className="profile-avatar-wrapper">
-                        {previewUrl ? <img src={previewUrl} alt="Avatar" className="profile-avatar" /> : <div className="avatar-placeholder"></div>}
+                        <img 
+                            src={previewUrl || '/default-avatar.png'} 
+                            alt="Avatar" 
+                            className="profile-avatar" 
+                            onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                        />
                         {isEditing && (
                             <label htmlFor="avatar-upload" className="avatar-edit-overlay">
                                 <span>Promijeni</span>
@@ -95,7 +150,7 @@ const Profile = observer(() => {
                                     className={`follow-btn ${p.isFollowing ? 'following' : 'follow-black'}`}
                                     onClick={() => p.isFollowing ? userStore.handleUnfollow(p.id) : userStore.handleFollow(p.id)}
                                 >
-                                    {p.isFollowing ? <><span className="text-following">Pratim</span><span className="text-unfollow">Otprati</span></> : "Prati"}
+                                    {p.isFollowing ? "Pratim" : "Prati"}
                                 </button>
                             </div>
                         )}
@@ -108,12 +163,16 @@ const Profile = observer(() => {
                                 <p className="handle">@{p.username}</p>
                                 <p className="bio">{p.bio || "Nema biografije."}</p>
                                 <div className="profile-stats">
-                                    <span><strong>{p.followingCount || 0}</strong> Prati</span>
-                                    <span><strong>{p.followersCount || 0}</strong> Pratitelja</span>
+                                    <span className="stat-link" onClick={() => openUserModal('following')}>
+                                        <strong>{p.followingCount || 0}</strong> Prati
+                                    </span>
+                                    <span className="stat-link" onClick={() => openUserModal('followers')}>
+                                        <strong>{p.followersCount || 0}</strong> Pratitelja
+                                    </span>
                                 </div>
                             </div>
                         ) : (
-                            <form className="edit-form">
+                            <form className="edit-form" onSubmit={handleUpdate}>
                                 <input type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} placeholder="Ime prikaza" />
                                 <textarea value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} placeholder="Biografija" />
                             </form>

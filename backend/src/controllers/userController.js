@@ -22,14 +22,29 @@ export const upload = multer({
 
 // --- KONTROLER FUNKCIJE ---
 
+/**
+ * 1. Dohvaćanje vlastitog profila (ulogirani korisnik)
+ */
 export const getProfile = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
             attributes: { exclude: ['password', 'verificationToken'] },
             include: [
-                { model: Tweet, as: 'Tweets', attributes: ['id', 'content', 'image', 'createdAt'] },
-                { model: User, as: 'Followers', attributes: ['id'] },
-                { model: User, as: 'Following', attributes: ['id'] }
+                { 
+                    model: Tweet, 
+                    as: 'Tweets', 
+                    attributes: ['id', 'content', 'image', 'createdAt'] 
+                },
+                { 
+                    model: User, 
+                    as: 'Followers', 
+                    attributes: ['id', 'username', 'displayName', 'avatar'] 
+                },
+                { 
+                    model: User, 
+                    as: 'Following', 
+                    attributes: ['id', 'username', 'displayName', 'avatar'] 
+                }
             ],
             order: [[ { model: Tweet, as: 'Tweets' }, 'createdAt', 'DESC' ]]
         });
@@ -46,6 +61,9 @@ export const getProfile = async (req, res) => {
     }
 };
 
+/**
+ * 2. Ažuriranje profila (Ime, Bio, Avatar)
+ */
 export const updateProfile = async (req, res) => {
     try {
         const { bio, username, displayName } = req.body;
@@ -53,6 +71,7 @@ export const updateProfile = async (req, res) => {
 
         if (!user) return res.status(404).json({ message: 'Korisnik nije pronađen' });
 
+        // Provjera zauzetosti username-a ako se mijenja
         if (username && username !== user.username) {
             const existingUser = await User.findOne({ where: { username } });
             if (existingUser) return res.status(400).json({ message: 'Korisničko ime je već zauzeto' });
@@ -63,20 +82,22 @@ export const updateProfile = async (req, res) => {
         user.displayName = displayName !== undefined ? displayName : user.displayName;
 
         if (req.file) {
-            const protocol = req.protocol;
-            const host = req.get('host');
-            user.avatar = `${protocol}://${host}/uploads/${req.file.filename}`;
+            // Spremamo relativnu putanju (Frontend Store će dodati URL servera)
+            user.avatar = `uploads/${req.file.filename}`;
         }
 
         await user.save();
-        const updatedUser = user.get({ plain: true });
-        delete updatedUser.password;
-        res.json(updatedUser);
+        
+        // Vraćamo puni profil (sa svim listama) pozivajući getProfile logiku
+        return getProfile(req, res);
     } catch (error) {
         res.status(500).json({ message: 'Greška pri ažuriranju profila' });
     }
 };
 
+/**
+ * 3. Dohvaćanje tuđeg (javnog) profila putem username-a
+ */
 export const getUserByUsername = async (req, res) => {
     try {
         const { username } = req.params;
@@ -86,9 +107,21 @@ export const getUserByUsername = async (req, res) => {
             where: { username },
             attributes: ['id', 'username', 'displayName', 'avatar', 'bio', 'createdAt'],
             include: [
-                { model: Tweet, as: 'Tweets', attributes: ['id', 'content', 'image', 'createdAt'] },
-                { model: User, as: 'Followers', attributes: ['id', 'username'] },
-                { model: User, as: 'Following', attributes: ['id', 'username'] }
+                { 
+                    model: Tweet, 
+                    as: 'Tweets', 
+                    attributes: ['id', 'content', 'image', 'createdAt'] 
+                },
+                { 
+                    model: User, 
+                    as: 'Followers', 
+                    attributes: ['id', 'username', 'displayName', 'avatar'] 
+                },
+                { 
+                    model: User, 
+                    as: 'Following', 
+                    attributes: ['id', 'username', 'displayName', 'avatar'] 
+                }
             ],
             order: [[ { model: Tweet, as: 'Tweets' }, 'createdAt', 'DESC' ]]
         });
@@ -98,6 +131,8 @@ export const getUserByUsername = async (req, res) => {
         const userData = user.toJSON();
         userData.followersCount = user.Followers?.length || 0;
         userData.followingCount = user.Following?.length || 0;
+        
+        // Provjera prati li trenutni ulogirani korisnik ovaj profil
         userData.isFollowing = user.Followers.some(f => f.id === currentUserId);
 
         res.json(userData);
@@ -107,7 +142,7 @@ export const getUserByUsername = async (req, res) => {
 };
 
 /**
- * 4. Zapratite korisnika + WEBSOCKET
+ * 4. Zapratite korisnika + Webhook/Socket emit
  */
 export const followUser = async (req, res) => {
     try {
@@ -125,11 +160,8 @@ export const followUser = async (req, res) => {
 
         await currentUser.addFollowing(userToFollow);
 
-        // Dohvaćamo novi broj pratitelja nakon akcije
         const followersCount = await userToFollow.countFollowers();
 
-        // SLANJE PREKO WEBSOCKETA
-        // Koristimo req.io koji smo postavili u server.js
         if (req.io) {
             req.io.emit('update_followers', {
                 userId: targetUserId,
@@ -144,7 +176,7 @@ export const followUser = async (req, res) => {
 };
 
 /**
- * 5. Otpratite korisnika + WEBSOCKET
+ * 5. Otpratite korisnika + Webhook/Socket emit
  */
 export const unfollowUser = async (req, res) => {
     try {
@@ -160,7 +192,6 @@ export const unfollowUser = async (req, res) => {
 
         const followersCount = await userToUnfollow.countFollowers();
 
-        // SLANJE PREKO WEBSOCKETA
         if (req.io) {
             req.io.emit('update_followers', {
                 userId: targetUserId,
