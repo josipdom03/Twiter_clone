@@ -44,7 +44,11 @@ const User = sequelize.define('User', {
   verificationToken: {
     type: DataTypes.STRING,
     allowNull: true
-  }
+  },
+  isPrivate: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+}
 }, {
   underscored: true, 
   timestamps: true

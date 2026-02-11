@@ -4,6 +4,7 @@ import Tweet from './Tweet.js';
 import Comment from './Comment.js';
 import Notification from './Notification.js';
 import Message from './Message.js';
+import FollowRequest from './FollowRequest.js';
 
 // --- USER & TWEET ---
 User.hasMany(Tweet, { foreignKey: 'userId', onDelete: 'CASCADE' });
@@ -46,4 +47,10 @@ User.hasMany(Message, { as: 'ReceivedMessages', foreignKey: 'recipientId' });
 Message.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
 Message.belongsTo(User, { as: 'Recipient', foreignKey: 'recipientId' });
 
-export { sequelize, User, Tweet, Comment, Notification, Message };
+// --- FOLLOW REQUIEST ---
+User.hasMany(FollowRequest, { as: 'SentRequests', foreignKey: 'senderId' });
+User.hasMany(FollowRequest, { as: 'ReceivedRequests', foreignKey: 'recipientId' });
+FollowRequest.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
+FollowRequest.belongsTo(User, { as: 'Recipient', foreignKey: 'recipientId' });
+
+export { sequelize, User, Tweet, Comment, Notification, Message,FollowRequest };

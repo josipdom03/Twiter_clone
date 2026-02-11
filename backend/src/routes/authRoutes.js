@@ -4,6 +4,11 @@ import { validateRegister } from '../middleware/validateRegister.js';
 
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log("Auth Router zaprimio zahtjev:", req.method, req.url);
+  next();
+});
+
 router.post('/register', validateRegister, register);
 
 router.get('/verify-email', verifyEmail); 

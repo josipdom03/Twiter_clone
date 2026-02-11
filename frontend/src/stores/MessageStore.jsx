@@ -55,14 +55,23 @@ class MessageStore {
     }
 
     async fetchChat(userId) {
-        this.isLoading = true;
-        try {
-            const res = await axios.get(`http://localhost:3000/api/message/${userId}`, this.config);
-            
-            runInAction(() => {
-                this.activeChat = res.data; 
+    this.isLoading = true;
+    try {
+        const res = await axios.get(`http://localhost:3000/api/message/${userId}`, this.config);
+        
+        runInAction(() => {
+            // Pretpostavka: backend vraća objekt { messages: [], user: {} } 
+            // ili samo niz poruka. Prilagodi prema svom API-ju:
+            if (res.data.messages) {
+                this.activeChat = res.data.messages;
+                this.interlocutor = res.data.user;
+            } else {
+                this.activeChat = res.data;
+            }
 
-                // 1. POKUŠAJ: Nađi sugovornika u listi konverzacija
+            // --- POBOLJŠANA LOGIKA ZA INTERLOCUTORA ---
+            if (!this.interlocutor) {
+                // 1. Pokušaj naći u postojećim konverzacijama
                 const conversation = this.conversations.find(c => 
                     String(c.Participant1Id) === String(userId) || 
                     String(c.Participant2Id) === String(userId)
@@ -74,24 +83,21 @@ class MessageStore {
                         : conversation.Participant2;
                 } 
                 
-                // 2. POKUŠAJ (Fallback): Ako ga nema u konverzacijama, izvuci ga iz poruke
-                // Gledamo poruku gdje je Sender objekt prisutan i ID se poklapa
+                // 2. Fallback: Ako je lista prazna, uzmi podatke iz bilo koje poruke koja nije tvoja
                 if (!this.interlocutor && this.activeChat.length > 0) {
-                    const msgWithSender = this.activeChat.find(m => 
-                        m.Sender && String(m.senderId) === String(userId)
-                    );
-                    if (msgWithSender) {
-                        this.interlocutor = msgWithSender.Sender;
+                    const peerMsg = this.activeChat.find(m => String(m.senderId) === String(userId));
+                    if (peerMsg && peerMsg.Sender) {
+                        this.interlocutor = peerMsg.Sender;
                     }
                 }
-
-                this.isLoading = false;
-            });
-        } catch (err) {
-            console.error("Greška pri dohvaćanju chata:", err);
-            runInAction(() => { this.isLoading = false; });
-        }
+            }
+            this.isLoading = false;
+        });
+    } catch (err) {
+        console.error("Greška pri dohvaćanju chata:", err);
+        runInAction(() => { this.isLoading = false; });
     }
+}
 
     async sendMessage(recipientId, content) {
         try {

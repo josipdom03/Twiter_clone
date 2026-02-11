@@ -15,6 +15,7 @@ import tweetRoutes from './routes/tweetRoutes.js';
 import commentRoutes from './routes/commentRoutes.js';
 import likeRoutes from './routes/likeRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import followRoutes from './routes/followRoutes.js';
 
 dotenv.config();
 
@@ -67,8 +68,7 @@ app.use((req, res, next) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Ispravljena putanja za uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Debug logger
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -82,6 +82,7 @@ app.use('/api/tweets', tweetRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/message', messageRoutes);
+app.use('/api/follow',followRoutes);
 
 app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');

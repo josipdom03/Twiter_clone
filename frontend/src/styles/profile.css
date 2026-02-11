@@ -451,3 +451,36 @@
     cursor: pointer;
     padding: 5px 10px;
 }
+
+/* Stil za zaključani profil */
+.private-account-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    border: 1px solid #333;
+    border-radius: 16px;
+    margin-top: 20px;
+}
+
+.lock-circle {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    background: #1d9bf0;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+/* Stil za pending gumb */
+.follow-btn.pending {
+    background-color: #222 !important;
+    color: #888 !important;
+    border: 1px solid #444 !important;
+    cursor: default;
+}

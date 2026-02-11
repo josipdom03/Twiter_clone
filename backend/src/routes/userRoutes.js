@@ -1,24 +1,14 @@
 import express from 'express';
-import { getProfile, updateProfile, upload, getUserByUsername,followUser,unfollowUser } from '../controllers/userController.js';
-import {authMiddleware,optionalAuth} from '../middleware/authMiddleware.js';
+import { getProfile, updateProfile, upload, getUserByUsername } from '../controllers/userController.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// 1. Privatne rute (za ulogiranog korisnika)
-// Putanja: GET /api/users/profile
+// 1. Profil ulogiranog korisnika
 router.get('/profile', authMiddleware, getProfile);
-
-// Putanja: PUT /api/users/profile
 router.put('/profile', authMiddleware, upload.single('avatar'), updateProfile);
 
-// 2. Javne rute (za pregled tuđih profila)
-// Putanja: GET /api/users/u/:username  <-- DODAN /u/ PREFIKS
-router.get('/u/:username',authMiddleware, getUserByUsername);
-
-//Putanja za Prati korisnika
-router.post('/:id/follow', authMiddleware, followUser);
-//Putanja za otpratiti korisnika 
-router.delete('/:id/unfollow', authMiddleware, unfollowUser);
-
+// 2. Javne rute (uz provjeru privatnosti unutar kontrolera)
+router.get('/u/:username', authMiddleware, getUserByUsername);
 
 export default router;

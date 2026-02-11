@@ -1,29 +1,36 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import axios from "axios";
-import socket from "../socket.js"; // Importamo instancu socketa
+import socket from "../socket.js";
 
 class AuthStore {
     user = null;
     token = localStorage.getItem("token") || null;
     isAuthenticated = !!localStorage.getItem("token");
     isLoading = false;
+    pendingFollowRequests = [];
 
     constructor() {
         makeAutoObservable(this);
-        // Ako već imamo token pri učitavanju aplikacije, provjeri auth i spoji socket
         if (this.token) {
             this.checkAuth();
         }
+        this.setupSocketListeners();
     }
 
-    // --- POMOĆNA METODA ZA SOCKET SPAJANJE ---
+    setupSocketListeners() {
+        socket.on("new_follow_request", (data) => {
+            runInAction(() => {
+                this.pendingFollowRequests.unshift(data.request);
+                console.log("Novi zahtjev za praćenje primljen putem socketa");
+            });
+        });
+    }
+
     initializeSocket(userId) {
         if (!socket.connected) {
             socket.connect();
         }
-        // Javljamo serveru tko smo kako bi nas stavio u privatnu sobu
         socket.emit("join", userId);
-        console.log(`Socket povezan i korisnik ${userId} pridružen sobi.`);
     }
 
     setToken(token) {
@@ -33,12 +40,24 @@ class AuthStore {
             this.isAuthenticated = true;
         } else {
             localStorage.removeItem("token");
-            localStorage.removeItem("user");
             this.isAuthenticated = false;
-            // Odspoji socket pri logoutu
             if (socket.connected) {
                 socket.disconnect();
             }
+        }
+    }
+
+    async fetchPendingRequests() {
+        if (!this.token) return;
+        try {
+            const res = await axios.get("http://localhost:3000/api/follow/requests", {
+                headers: { Authorization: `Bearer ${this.token}` }
+            });
+            runInAction(() => {
+                this.pendingFollowRequests = res.data;
+            });
+        } catch (err) {
+            console.error("Neuspješno dohvaćanje zahtjeva za praćenje", err);
         }
     }
 
@@ -53,8 +72,8 @@ class AuthStore {
             runInAction(() => {
                 this.user = user;
                 this.setToken(token);
-                // INICIJALIZACIJA SOCKETA NAKON LOGIN-A
                 this.initializeSocket(user.id);
+                this.fetchPendingRequests();
             });
             return response.data;
         } catch (error) {
@@ -64,10 +83,27 @@ class AuthStore {
         }
     }
 
+    async register(username, email, password) {
+        this.isLoading = true;
+        try {
+            const response = await axios.post("http://localhost:3000/api/auth/register", {
+                username,
+                email,
+                password,
+            });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data?.message || "Registracija neuspješna";
+        } finally {
+            runInAction(() => { this.isLoading = false; });
+        }
+    }
+
     logout() {
         runInAction(() => {
             this.user = null;
             this.setToken(null);
+            this.pendingFollowRequests = [];
         });
     }
 
@@ -85,8 +121,8 @@ class AuthStore {
             runInAction(() => {
                 this.user = res.data;
                 this.isAuthenticated = true;
-                // INICIJALIZACIJA SOCKETA NAKON USPJEŠNE PROVJERE PROFILA
                 this.initializeSocket(res.data.id);
+                this.fetchPendingRequests();
             });
         } catch (err) {
             console.error("Auth check failed:", err);
@@ -96,22 +132,35 @@ class AuthStore {
         }
     }
 
-    // Dodano za svaki slučaj
-    async register(username, email, password) {
-        this.isLoading = true;
+    async updatePrivacy(isPrivate) {
         try {
-            const response = await axios.post("http://localhost:3000/api/auth/register", {
-                username,
-                email,
-                password,
+            const res = await axios.put("http://localhost:3000/api/users/profile", 
+                { isPrivate },
+                { headers: { Authorization: `Bearer ${this.token}` } }
+            );
+            runInAction(() => {
+                if (this.user) this.user.isPrivate = res.data.isPrivate;
             });
-            return response.data;
-        } catch (error) {
-            throw error.response?.data?.message || "Registracija neuspješna";
-        } finally {
-            runInAction(() => { this.isLoading = false; });
+        } catch (err) {
+            console.error("Greška pri promjeni privatnosti");
         }
     }
+
+
+    async respondToFollowRequest(requestId, action) {
+    try {
+        await axios.post("http://localhost:3000/api/follow/respond", 
+            { requestId, action },
+            { headers: { Authorization: `Bearer ${this.token}` } }
+        );
+        runInAction(() => {
+            // Makni zahtjev iz liste na frontendu odmah
+            this.pendingFollowRequests = this.pendingFollowRequests.filter(req => req.id !== requestId);
+        });
+    } catch (err) {
+        console.error("Greška pri odgovoru na zahtjev", err);
+    }
+}
 }
 
 export const authStore = new AuthStore();

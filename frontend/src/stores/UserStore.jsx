@@ -24,11 +24,9 @@ class UserStore {
         return `${API_BASE}${path}`;
     }
 
-    // Pomoćna funkcija koja čisti listu pratitelja i popravlja slike unutar nje
     processUserList(list) {
         if (!list || !Array.isArray(list)) return [];
         return list.map(item => {
-            // Sequelize često umata podatke u Follower ili Following objekte
             const userData = item.Follower || item.Following || item;
             return {
                 ...userData,
@@ -67,8 +65,6 @@ class UserStore {
             runInAction(() => {
                 const data = res.data;
                 data.avatar = this.formatAvatarUrl(data);
-                
-                // Popravljamo liste za tvoj profil
                 data.Followers = this.processUserList(data.Followers || data.followers);
                 data.Following = this.processUserList(data.Following || data.following);
 
@@ -87,14 +83,13 @@ class UserStore {
         this.isLoading = true;
         this.error = null;
         try {
+            // Provjeri putanju na backendu, obično je /api/users/:username ili /api/users/u/:username
             const res = await axios.get(`${API_BASE}/api/users/u/${username}`, {
                 headers: this.getAuthHeaders()
             });
             runInAction(() => { 
                 const data = res.data;
                 data.avatar = this.formatAvatarUrl(data);
-                
-                // Popravljamo liste za tuđe profile
                 data.Followers = this.processUserList(data.Followers || data.followers);
                 data.Following = this.processUserList(data.Following || data.following);
 
@@ -124,32 +119,46 @@ class UserStore {
         }
     }
 
+    // POPRAVLJENO: Koristi /api/follow/:id
     handleFollow = async (userId) => {
         try {
+            const res = await axios.post(`${API_BASE}/api/follow/${userId}`, {}, { 
+                headers: this.getAuthHeaders() 
+            });
+
             runInAction(() => {
                 if (this.publicProfile && String(this.publicProfile.id) === String(userId)) {
-                    this.publicProfile.isFollowing = true;
-                    this.publicProfile.followersCount++;
+                    if (res.data.status === 'pending') {
+                        this.publicProfile.followStatus = 'pending';
+                    } else {
+                        this.publicProfile.isFollowing = true;
+                        this.publicProfile.followersCount++;
+                    }
                 }
             });
-            await axios.post(`${API_BASE}/api/users/${userId}/follow`, {}, { headers: this.getAuthHeaders() });
-            this.fetchPublicProfile(this.publicProfile?.username);
         } catch (error) {
+            console.error("Follow error:", error);
+            // Osvježi profil u slučaju greške da se UI sinkronizira
             this.fetchPublicProfile(this.publicProfile?.username);
         }
     };
 
+    // POPRAVLJENO: Koristi DELETE /api/follow/:id
     handleUnfollow = async (userId) => {
         try {
+            await axios.delete(`${API_BASE}/api/follow/${userId}`, { 
+                headers: this.getAuthHeaders() 
+            });
+
             runInAction(() => {
                 if (this.publicProfile && String(this.publicProfile.id) === String(userId)) {
                     this.publicProfile.isFollowing = false;
-                    this.publicProfile.followersCount--;
+                    this.publicProfile.followStatus = null;
+                    this.publicProfile.followersCount = Math.max(0, this.publicProfile.followersCount - 1);
                 }
             });
-            await axios.delete(`${API_BASE}/api/users/${userId}/unfollow`, { headers: this.getAuthHeaders() });
-            this.fetchPublicProfile(this.publicProfile?.username);
         } catch (error) {
+            console.error("Unfollow error:", error);
             this.fetchPublicProfile(this.publicProfile?.username);
         }
     };

@@ -203,3 +203,149 @@
     opacity: 0.5;
     cursor: default;
 }
+
+/* --- SEKCIJA ZA ZAHTJEVE ZA PRAĆENJE (DODATAK) --- */
+
+.sidebar-requests-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Gumb koji izgleda kao NavLink ali služi za otvaranje zahtjeva */
+.requests-toggle {
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    font-family: inherit; /* Da naslijedi font od body-ja */
+}
+
+/* Broj zahtjeva (Badge) */
+.requests-badge {
+    background-color: #1d9bf0;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    margin-left: auto;
+    margin-right: 5px;
+}
+
+/* Dropdown kontejner koji se pojavi ispod gumba */
+.sidebar-requests-dropdown {
+    background-color: #ffffff;
+    border: 1px solid #eff3f4;
+    border-radius: 16px;
+    margin: 5px 10px;
+    padding: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Blaga sjena za dubinu */
+}
+
+/* Pojedinačni zahtjev u listi */
+.sidebar-request-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 8px;
+    border-bottom: 1px solid #f7f9f9;
+    transition: background 0.2s;
+}
+
+.sidebar-request-item:last-child {
+    border-bottom: none;
+}
+
+.sidebar-request-item:hover {
+    background-color: #f7f7f7;
+    border-radius: 8px;
+}
+
+/* Informacije o pošiljatelju (avatar + username) */
+.req-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.req-user-info img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.req-username {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f1419;
+}
+
+/* Gumbi za akciju (✔ i ✖) */
+.req-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.req-accept-btn, .req-reject-btn {
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s, background-color 0.2s;
+}
+
+.req-accept-btn {
+    background-color: #00ba7c; /* Zelena */
+    color: white;
+}
+
+.req-accept-btn:hover {
+    background-color: #009664;
+    transform: scale(1.1);
+}
+
+.req-reject-btn {
+    background-color: #f4212e; /* Crvena */
+    color: white;
+}
+
+.req-reject-btn:hover {
+    background-color: #d31b26;
+    transform: scale(1.1);
+}
+
+.no-requests-text {
+    font-size: 14px;
+    color: #536471;
+    text-align: center;
+    margin: 15px 0;
+}
+
+/* --- LOGOUT GUMB --- */
+.sidebar-logout-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    margin-left: 10px;
+    transition: background 0.2s;
+}
+
+.sidebar-logout-btn:hover {
+    background-color: #fee7e7; /* Blaga crvena na hoveru za odjavu */
+}
