@@ -7,7 +7,6 @@ import { userStore } from '../stores/UserStore';
 import '../styles/chat.css';
 
 const ChatDetail = observer(() => {
-    // useParams vraća string, osigurajmo da je definiran
     const { userId } = useParams();
     const navigate = useNavigate();
     const [text, setText] = useState("");
@@ -22,12 +21,12 @@ const ChatDetail = observer(() => {
 
         const loadChatData = async () => {
             try {
-                // Prvo dohvati poruke (ovo bi u tvojem storeu trebalo postaviti i interlocutor-a)
+                // 1. Pokušaj dohvatiti chat (i info o korisniku ako postoji povijest)
                 await messageStore.fetchChat(userId);
                 
-                // Ako nakon fetchChat i dalje nemamo peer-a, probajmo ga naći u konverzacijama
+                // 2. Ako interlocutor još nije postavljen (npr. novi chat bez poruka), dohvati ga ručno
                 if (!messageStore.interlocutor) {
-                    await messageStore.fetchConversations();
+                    await messageStore.fetchInterlocutorInfo(userId);
                 }
             } catch (err) {
                 console.error("Greška pri učitavanju chata:", err);
@@ -36,16 +35,14 @@ const ChatDetail = observer(() => {
 
         loadChatData();
 
-        // Čišćenje pri izlasku - važno da se ne miješaju poruke različitih korisnika
         return () => {
             messageStore.clearActiveChat();
         };
     }, [userId]);
 
-    // Scroll na dno čim se učitaju poruke ili stigne nova
     useEffect(() => {
         scrollToBottom();
-    }, [messageStore.activeChat?.length]);
+    }, [messageStore.activeChat?.length, messageStore.isTyping]);
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -55,18 +52,27 @@ const ChatDetail = observer(() => {
         try {
             await messageStore.sendMessage(userId, trimmedText);
             setText("");
-            // Scrollaj odmah nakon slanja
+            messageStore.sendTypingStatus(userId, false);
             setTimeout(scrollToBottom, 50);
         } catch (err) {
             console.error("Slanje poruke nije uspjelo:", err);
-            alert("Slanje poruke nije uspjelo.");
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const val = e.target.value;
+        setText(val);
+        if (userId) {
+            messageStore.sendTypingStatus(userId, val.length > 0);
+            clearTimeout(window.typingTimeout);
+            window.typingTimeout = setTimeout(() => {
+                messageStore.sendTypingStatus(userId, false);
+            }, 3000);
         }
     };
 
     const peer = messageStore.interlocutor;
-
-    console.log("Trenutni sugovornik (peer):", peer);
-    console.log("Aktivne poruke:", messageStore.activeChat);
+    const isOnline = messageStore.isInterlocutorOnline;
 
     return (
         <div className="chat-detail">
@@ -75,14 +81,20 @@ const ChatDetail = observer(() => {
                 
                 {peer ? (
                     <div className="chat-user-info" onClick={() => navigate(`/profile/${peer.username}`)}>
-                        <img 
-                            src={peer.avatar || '/default-avatar.png'} 
-                            className="header-mini-avatar" 
-                            alt="avatar" 
-                            onError={(e) => { e.target.src = '/default-avatar.png'; }}
-                        />
+                        <div className="avatar-container">
+                            <img 
+                                src={peer.avatar || '/default-avatar.png'} 
+                                className="header-mini-avatar" 
+                                alt="avatar" 
+                                onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                            />
+                            {isOnline && <span className="online-indicator-dot"></span>}
+                        </div>
                         <div className="user-text-details">
-                            <span className="user-full-name">{peer.displayName || peer.username}</span>
+                            <span className="user-full-name">
+                                {peer.displayName || peer.username}
+                                {isOnline && <span className="online-text"> (Online)</span>}
+                            </span>
                             <div className="follow-status-mini">
                                 {peer.isFollowing ? (
                                     <span className="following-tag">✓ Pratiš</span>
@@ -102,17 +114,19 @@ const ChatDetail = observer(() => {
                     </div>
                 ) : (
                     <div className="chat-user-info">
-                        <span className="user-full-name">Učitavanje sugovornika... (ID: {userId})</span>
+                        <span className="user-full-name">Učitavanje...</span>
                     </div>
                 )}
             </div>
 
             <div className="chat-messages-area">
-                {!messageStore.activeChat || messageStore.activeChat.length === 0 ? (
-                    <div className="empty-chat-notice">Nema poruka. Započnite razgovor!</div>
+                {(!messageStore.activeChat || messageStore.activeChat.length === 0) ? (
+                    <div className="empty-chat-notice">
+                        Nema poruka. Započnite razgovor s korisnikom {peer?.username || ''}!
+                    </div>
                 ) : (
                     messageStore.activeChat.map((msg, index) => {
-                        const isMine = msg.senderId === authStore.user?.id;
+                        const isMine = String(msg.senderId) === String(authStore.user?.id);
                         return (
                             <div key={msg.id || index} className={`message-wrapper ${isMine ? 'mine' : 'theirs'}`}>
                                 {!isMine && (
@@ -123,13 +137,29 @@ const ChatDetail = observer(() => {
                                         onError={(e) => { e.target.src = '/default-avatar.png'; }}
                                     />
                                 )}
-                                <div className="message-bubble">
-                                    {msg.content}
+                                <div className="message-container">
+                                    <div className="message-bubble">
+                                        {msg.content}
+                                    </div>
+                                    {isMine && (
+                                        <div className={`read-status ${msg.isRead ? 'read' : ''}`}>
+                                            {msg.isRead ? '✓✓' : '✓'}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
                     })
                 )}
+                
+                {messageStore.isTyping && (
+                    <div className="message-wrapper theirs">
+                        <div className="typing-indicator-bubble">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                )}
+
                 <div ref={messagesEndRef} />
             </div>
             
@@ -139,7 +169,7 @@ const ChatDetail = observer(() => {
                         type="text" 
                         placeholder="Napiši poruku..." 
                         value={text}
-                        onChange={(e) => setText(e.target.value)}
+                        onChange={handleInputChange}
                         autoFocus
                     />
                     <button type="submit" disabled={!text.trim() || !userId} className="send-btn">

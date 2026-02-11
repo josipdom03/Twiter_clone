@@ -22,26 +22,37 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-// --- 1. POBOLJŠANA SOCKET.IO KONFIGURACIJA ---
+// --- 1. SOCKET.IO KONFIGURACIJA ---
 const io = new Server(httpServer, {
   cors: {
     origin: "http://localhost:5173",
     methods: ["GET", "POST"],
-    credentials: true,
-    allowedHeaders: ["my-custom-header"], // Pomaže kod nekih proxy problema
+    credentials: true
   },
-  transports: ['websocket', 'polling'] // Eksplicitno navodimo protokole
+  transports: ['websocket', 'polling']
 });
 
-// --- 2. SOCKET LOGIKA ---
+// --- 2. SOCKET LOGIKA (Sve mora biti UNUTAR io.on) ---
 io.on('connection', (socket) => {
   console.log('Korisnik spojen:', socket.id);
 
+  // Pridruživanje sobi
   socket.on('join', (userId) => {
     if (userId) {
       socket.join(`user_${userId}`);
       console.log(`Korisnik ${userId} ušao u sobu: user_${userId}`);
     }
+  });
+
+  // LOGIKA ZA PROČITANE PORUKE (Popravljeno)
+  socket.on('messages_seen', ({ senderId, receiverId }) => {
+    console.log(`Poruke od ${senderId} označene kao pročitane od strane ${receiverId}`);
+    
+    // Šaljemo obavijest pošiljatelju u njegovu privatnu sobu
+    // Koristimo format user_ID jer si tako definirao u join-u
+    io.to(`user_${senderId}`).emit('messages_read_update', { 
+      readBy: receiverId 
+    });
   });
 
   socket.on('disconnect', () => {
@@ -51,7 +62,6 @@ io.on('connection', (socket) => {
 
 // --- MIDDLEWARES ---
 
-// Postavi CORS middleware PRIJE ruta
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true
@@ -67,8 +77,9 @@ app.use((req, res, next) => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Ispravljena putanja za uploads
+
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Debug logger
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -82,7 +93,7 @@ app.use('/api/tweets', tweetRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/message', messageRoutes);
-app.use('/api/follow',followRoutes);
+app.use('/api/follow', followRoutes);
 
 app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');

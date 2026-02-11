@@ -92,3 +92,27 @@ export const getConversations = async (req, res) => {
         res.status(500).json({ message: 'Greška pri dohvaćanju konverzacija' });
     }
 };
+
+export const markAsRead = async (req, res) => {
+    try {
+        const { senderId } = req.params; // Mora biti isto kao u ruti :senderId
+        const userId = req.user.id;      // Ti si primatelj koji čita poruke
+
+        const [updatedRows] = await Message.update(
+            { isRead: true },
+            { 
+                where: { 
+                    senderId: senderId, 
+                    recipientId: userId, 
+                    isRead: false 
+                } 
+            }
+        );
+
+        console.log(`Ažurirano poruka: ${updatedRows}`);
+        res.status(200).json({ message: "Poruke označene kao pročitane" });
+    } catch (error) {
+        console.error("Greška u markAsRead:", error);
+        res.status(500).json({ error: error.message });
+    }
+};

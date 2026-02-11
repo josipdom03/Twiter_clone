@@ -215,3 +215,55 @@
 .mini-follow-btn:hover {
     background-color: #272c30;
 }
+
+
+/* Kontejner koji drži mjehurić i kvačicu */
+.message-container {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    max-width: 75%;
+}
+
+/* Pozicioniranje kvačica za tvoje poruke */
+.mine .message-container {
+    align-items: flex-end; /* Poravnava status desno */
+}
+
+.theirs .message-container {
+    align-items: flex-start;
+}
+
+/* Stilovi za kvačice */
+.read-status {
+    font-size: 11px;
+    margin-top: 2px;
+    margin-right: 4px;
+    color: #536471; /* Neutralna siva za poslane poruke */
+    font-weight: bold;
+    letter-spacing: -1px; /* Približava kvačice jednu drugoj (✓✓) */
+    transition: color 0.3s ease;
+    user-select: none;
+}
+
+/* Kada je poruka pročitana (kvačice postaju plave) */
+.read-status.read {
+    color: #1d9bf0; /* Twitter/X plava boja */
+    text-shadow: 0px 0px 1px rgba(29, 155, 240, 0.2); /* Blagi sjaj */
+}
+
+/* Dodatno: Animacija kad se kvačica pojavi ili promijeni boju */
+@keyframes seenPop {
+    0% { transform: scale(0.8); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.read-status.read {
+    animation: seenPop 0.3s ease-out;
+}
+
+/* Popravak margina za mjehurić da se kvačice ne lijepe */
+.mine .message-bubble {
+    margin-bottom: 0; /* Smanjujemo donji margin jer sad imamo status ispod */
+}

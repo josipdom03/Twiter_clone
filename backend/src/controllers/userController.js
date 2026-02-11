@@ -1,4 +1,4 @@
-import { User, Tweet } from '../models/index.js';
+import { User, Tweet,Comment,FollowRequest } from '../models/index.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -72,17 +72,31 @@ export const updateProfile = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Greška pri ažuriranju profila' });
     }
-};
-export const getUserByUsername = async (req, res) => {
+};export const getUserByUsername = async (req, res) => {
     try {
         const { username } = req.params;
         const currentUserId = req.user?.id; 
 
         const user = await User.findOne({
             where: { username },
-            attributes: ['id', 'username', 'displayName', 'avatar', 'bio', 'createdAt', 'isPrivate'], // Dodan isPrivate
+            attributes: ['id', 'username', 'displayName', 'avatar', 'bio', 'createdAt', 'isPrivate'],
             include: [
-                { model: Tweet, as: 'Tweets', attributes: ['id', 'content', 'image', 'createdAt'] },
+                { 
+                    model: Tweet, 
+                    as: 'Tweets', 
+                    attributes: ['id', 'content', 'image', 'createdAt'],
+                    include: [
+                        { 
+                            model: User, 
+                            as: 'LikedByUsers', 
+                            attributes: ['id'] // Dovoljan nam je samo ID da izbrojimo
+                        },
+                        { 
+                            model: Comment, 
+                            attributes: ['id'] // Dovoljan nam je samo ID da izbrojimo
+                        }
+                    ]
+                },
                 { model: User, as: 'Followers', attributes: ['id', 'username', 'displayName', 'avatar'] },
                 { model: User, as: 'Following', attributes: ['id', 'username', 'displayName', 'avatar'] }
             ],
@@ -92,18 +106,53 @@ export const getUserByUsername = async (req, res) => {
         if (!user) return res.status(404).json({ message: 'Korisnik nije pronađen' });
 
         const userData = user.toJSON();
+
+        // Mapiramo tweetove da dodamo likesCount i repliesCount koje Frontend očekuje
+        if (userData.Tweets) {
+            userData.Tweets = userData.Tweets.map(t => ({
+                ...t,
+                likesCount: t.LikedByUsers?.length || 0,
+                repliesCount: t.Comments?.length || 0,
+                // Provjera je li trenutni korisnik lajkao ovaj tweet
+                isLiked: t.LikedByUsers?.some(u => u.id === currentUserId) || false
+            }));
+        }
+
         userData.isFollowing = user.Followers.some(f => f.id === currentUserId);
         userData.followersCount = user.Followers?.length || 0;
         userData.followingCount = user.Following?.length || 0;
 
+        // Provjera poslanog zahtjeva ako je profil privatan
+        const pendingRequest = await FollowRequest.findOne({
+            where: { senderId: currentUserId, recipientId: user.id, status: 'pending' }
+        });
+        userData.followStatus = pendingRequest ? 'pending' : 'none';
+
         // --- LOGIKA PRIVATNOSTI ---
-        // Ako je profil privatan, a nismo mi i ne pratimo ga
         if (user.isPrivate && !userData.isFollowing && user.id !== currentUserId) {
-            userData.Tweets = []; // Sakrij tweetove
-            userData.isLocked = true; // Info za frontend
+            userData.Tweets = []; 
+            userData.isLocked = true; 
         }
 
         res.json(userData);
+    } catch (error) {
+        console.error("Greška u getUserByUsername:", error);
+        res.status(500).json({ message: 'Greška na serveru', error: error.message });
+    }
+};
+
+export const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findByPk(id, {
+            attributes: ['id', 'username', 'displayName', 'avatar', 'isPrivate']
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Korisnik nije pronađen' });
+        }
+
+        res.json(user);
     } catch (error) {
         res.status(500).json({ message: 'Greška na serveru', error: error.message });
     }
