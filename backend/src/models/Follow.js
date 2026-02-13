@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 
-const Follow = sequelize.define('Follow', {
+const Follow = sequelize.define('follow', {
     follower_id: { type: DataTypes.INTEGER, primaryKey: true },
     following_id: { type: DataTypes.INTEGER, primaryKey: true },
     notify: { 

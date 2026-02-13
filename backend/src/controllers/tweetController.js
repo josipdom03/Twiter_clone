@@ -12,12 +12,12 @@ export const getAllTweets = async (req, res) => {
                     attributes: [
                         'id', 'username', 'displayName', 'avatar',
                         [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
+                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                             'isFollowing'
                         ],
                         // DODANO: Provjera je li zvonce uključeno
                         [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
+                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
                             'isNotifying'
                         ]
                     ]
@@ -57,7 +57,7 @@ export const createTweet = async (req, res) => {
         try {
             // Pronađi sve koji prate autora i imaju upaljeno zvonce (notify: true)
             const subscribers = await sequelize.query(
-                `SELECT follower_id FROM Follows WHERE following_id = :authorId AND notify = true`,
+                `SELECT follower_id FROM follows WHERE following_id = :authorId AND notify = true`,
                 {
                     replacements: { authorId },
                     type: sequelize.QueryTypes.SELECT
@@ -107,12 +107,12 @@ export const getTweetById = async (req, res) => {
                     attributes: [
                         'id', 'username', 'displayName', 'avatar',
                         [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
+                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                             'isFollowing'
                         ],
                         // DODANO: I ovdje provjeravamo zvonce
                         [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
+                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
                             'isNotifying'
                         ]
                     ]
@@ -123,7 +123,7 @@ export const getTweetById = async (req, res) => {
                     attributes: [
                         'id', 'username', 'displayName', 'avatar',
                         [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`LikedByUsers\`.\`id\`)`),
+                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`LikedByUsers\`.\`id\`)`),
                             'isFollowing'
                         ]
                     ],
@@ -137,7 +137,7 @@ export const getTweetById = async (req, res) => {
                             attributes: [
                                 'id', 'username', 'displayName', 'avatar',
                                 [
-                                    sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
+                                    sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                                     'isFollowing'
                                 ]
                             ]

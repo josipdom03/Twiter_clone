@@ -5,13 +5,20 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Dohvaćanje obavijesti - port 5000
+  // Port 3000 je ispravan prema tvojoj Docker slici
+  const API_URL = 'http://localhost:3000/api/notifications';
+
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/notifications', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      setLoading(true);
+      // Dodajemo timestamp na kraj URL-a kako bi izbjegli cache probleme u browseru
+      const response = await axios.get(`${API_URL}?t=${Date.now()}`, {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem('token')}` 
+        }
       });
-      setNotifications(response.data);
+      
+      setNotifications(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Greška pri dohvaćanju obavijesti:', error);
     } finally {
@@ -23,36 +30,41 @@ const Notifications = () => {
     fetchNotifications();
   }, []);
 
-  // 2. Označavanje pojedinačne obavijesti - POST metoda prema tvojim rutama
   const markAsRead = async (id) => {
     try {
-      await axios.post(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+      await axios.post(`${API_URL}/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      
+      // Sinkroniziramo lokalno stanje
+      setNotifications(prev => prev.map(n => 
+        n.id === id ? { ...n, isRead: true, is_read: true } : n
+      ));
     } catch (error) {
       console.error('Greška pri označavanju:', error);
     }
   };
 
-  // 3. Označavanje svih kao pročitano
   const handleMarkAllAsRead = async () => {
     try {
-      await axios.patch('http://localhost:5000/api/notifications/read-all', {}, {
+      await axios.patch(`${API_URL}/read-all`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, is_read: true })));
     } catch (error) {
       console.error('Greška pri označavanju svih:', error);
     }
   };
 
   const getNotificationText = (notif) => {
-    const sender = notif.Sender?.username || 'Netko';
+    // Provjera postoji li Sender objekt da izbjegnemo crash
+    const sender = notif.Sender?.username || notif.sender?.username || 'Netko';
+    
     switch (notif.type) {
       case 'like': return `${sender} je lajkao tvoj tweet.`;
       case 'comment': return `${sender} je komentirao tvoj tweet.`;
       case 'follow': return `${sender} te počeo pratiti.`;
+      case 'message': return `${sender} ti je poslao poruku.`;
       default: return `${sender} ima novu aktivnost.`;
     }
   };
@@ -60,12 +72,12 @@ const Notifications = () => {
   if (loading) return <div className="p-4 text-gray-500">Učitavanje...</div>;
 
   return (
-    <div className="flex-1 border-x border-gray-800 min-h-screen text-white p-4">
+    <div className="flex-1 border-x border-gray-800 min-h-screen text-white p-4 bg-black">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl font-bold">Obavijesti</h1>
-        {notifications.some(n => !n.isRead) && (
+        {notifications.some(n => !n.isRead && !n.is_read) && (
           <button 
-            className="text-sm text-blue-400 hover:text-blue-300 transition"
+            className="text-sm text-blue-400 hover:text-blue-300 transition font-medium"
             onClick={handleMarkAllAsRead}
           >
             Označi sve kao pročitano
@@ -75,27 +87,39 @@ const Notifications = () => {
 
       <div className="space-y-2">
         {notifications.length === 0 ? (
-          <p className="text-gray-500 italic">Trenutno nemate obavijesti.</p>
+          <div className="text-center py-10">
+            <p className="text-gray-500 italic">Trenutno nemate obavijesti.</p>
+          </div>
         ) : (
-          notifications.map((n) => (
-            <div 
-              key={n.id} 
-              onClick={() => !n.isRead && markAsRead(n.id)}
-              className={`p-4 border-b border-gray-800 transition flex items-center justify-between ${
-                n.isRead ? 'opacity-60 bg-transparent' : 'bg-gray-900/50 hover:bg-gray-800 cursor-pointer'
-              }`}
-            >
-              <div className="flex flex-col">
-                <p className={`${!n.isRead ? 'font-semibold text-gray-100' : 'text-gray-400'}`}>
-                  {getNotificationText(n)}
-                </p>
-                <span className="text-xs text-gray-500 mt-1">
-                  {new Date(n.createdAt).toLocaleDateString('hr-HR')} u {new Date(n.createdAt).toLocaleTimeString('hr-HR', {hour: '2-digit', minute:'2-digit'})}
-                </span>
+          notifications.map((n) => {
+            // Sequelize u bazi koristi is_read, u JS-u može biti isRead
+            const isRead = n.isRead || n.is_read;
+            
+            return (
+              <div 
+                key={n.id} 
+                onClick={() => !isRead && markAsRead(n.id)}
+                className={`p-4 border-b border-gray-800 transition flex items-center justify-between ${
+                  isRead ? 'opacity-50' : 'bg-gray-900/30 hover:bg-gray-800 cursor-pointer'
+                }`}
+              >
+                <div className="flex flex-col">
+                  <p className={`${!isRead ? 'font-bold text-gray-100' : 'text-gray-400'}`}>
+                    {getNotificationText(n)}
+                  </p>
+                  <span className="text-xs text-gray-500 mt-1">
+                    {n.createdAt ? new Date(n.createdAt).toLocaleString('hr-HR', {
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    }) : 'Nedavno'}
+                  </span>
+                </div>
+                {!isRead && (
+                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+                )}
               </div>
-              {!n.isRead && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

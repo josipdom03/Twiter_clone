@@ -10,7 +10,7 @@ export const getNotifications = async (req, res) => {
                 {
                     model: User,
                     as: 'Sender',
-                    attributes: ['id', 'username', 'profilePicture'] 
+                    attributes: ['id', 'username', 'avatar'] 
                 },
                 {
                     model: Tweet,

@@ -16,6 +16,7 @@ import commentRoutes from './routes/commentRoutes.js';
 import likeRoutes from './routes/likeRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import followRoutes from './routes/followRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 dotenv.config();
 
@@ -94,6 +95,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/message', messageRoutes);
 app.use('/api/follow', followRoutes);
+app.use('/api/notifications',notificationRoutes);
 
 app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');
