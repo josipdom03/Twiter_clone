@@ -1,4 +1,4 @@
-import { Message, User } from '../models/index.js';
+import { Message, User, Notification, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // 1. Pošalji poruku
@@ -10,6 +10,31 @@ export const sendMessage = async (req, res) => {
         if (!content || !recipientId) {
             return res.status(400).json({ message: 'Nedostaju primatelj ili sadržaj poruke' });
         }
+
+        // --- NOVO: PROVJERA PRVE PORUKE ZA OBAVIJEST ---
+        try {
+            const alreadyChatted = await Message.findOne({
+                where: {
+                    [Op.or]: [
+                        { senderId, recipientId },
+                        { senderId: recipientId, recipientId: senderId }
+                    ]
+                }
+            });
+
+            // Ako nikada nisu razmijenili poruku, pošalji notifikaciju
+            if (!alreadyChatted) {
+                await Notification.create({
+                    type: 'message', // ili 'new_message_request'
+                    senderId: senderId,
+                    recipientId: recipientId,
+                    isRead: false
+                });
+            }
+        } catch (notifError) {
+            console.error("Greška pri kreiranju notifikacije za poruku:", notifError);
+        }
+        // ----------------------------------------------
 
         const message = await Message.create({
             senderId,
@@ -28,7 +53,6 @@ export const sendMessage = async (req, res) => {
         });
 
         if (req.io) {
-            // Šaljemo u sobu primatelja i u sobu pošiljatelja
             req.io.to(`user_${recipientId}`).emit('receive_message', fullMessage);
             req.io.to(`user_${senderId}`).emit('receive_message', fullMessage);
         }
@@ -95,8 +119,8 @@ export const getConversations = async (req, res) => {
 
 export const markAsRead = async (req, res) => {
     try {
-        const { senderId } = req.params; // Mora biti isto kao u ruti :senderId
-        const userId = req.user.id;      // Ti si primatelj koji čita poruke
+        const { senderId } = req.params; 
+        const userId = req.user.id; 
 
         const [updatedRows] = await Message.update(
             { isRead: true },
@@ -109,7 +133,6 @@ export const markAsRead = async (req, res) => {
             }
         );
 
-        console.log(`Ažurirano poruka: ${updatedRows}`);
         res.status(200).json({ message: "Poruke označene kao pročitane" });
     } catch (error) {
         console.error("Greška u markAsRead:", error);

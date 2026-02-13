@@ -1,4 +1,4 @@
-import { Tweet, User, Comment, sequelize } from '../models/index.js';
+import { Tweet, User, Comment, Notification, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 export const getAllTweets = async (req, res) => {
@@ -14,6 +14,11 @@ export const getAllTweets = async (req, res) => {
                         [
                             sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                             'isFollowing'
+                        ],
+                        // DODANO: Provjera je li zvonce uključeno
+                        [
+                            sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
+                            'isNotifying'
                         ]
                     ]
                 },
@@ -40,11 +45,41 @@ export const getAllTweets = async (req, res) => {
 export const createTweet = async (req, res) => {
     try {
         const { content, image } = req.body;
+        const authorId = req.user.id;
+
         const newTweet = await Tweet.create({
             content,
             image,
-            userId: req.user.id
+            userId: authorId
         });
+
+        // --- OBAVIJESTI PRATITELJIMA ---
+        try {
+            // Pronađi sve koji prate autora i imaju upaljeno zvonce (notify: true)
+            const subscribers = await sequelize.query(
+                `SELECT follower_id FROM Follows WHERE following_id = :authorId AND notify = true`,
+                {
+                    replacements: { authorId },
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+
+            if (subscribers.length > 0) {
+                const notificationsData = subscribers.map(sub => ({
+                    type: 'new_tweet',
+                    recipientId: sub.follower_id,
+                    senderId: authorId,
+                    tweetId: newTweet.id,
+                    isRead: false
+                }));
+
+                await Notification.bulkCreate(notificationsData);
+            }
+        } catch (notifError) {
+            console.error("Greška pri slanju obavijesti:", notifError);
+            // Ne bacamo 500 grešku ovdje jer je tweet već uspješno kreiran
+        }
+        // ------------------------------
 
         if (req.io) {
             req.io.emit('new_tweet', newTweet);
@@ -74,6 +109,11 @@ export const getTweetById = async (req, res) => {
                         [
                             sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                             'isFollowing'
+                        ],
+                        // DODANO: I ovdje provjeravamo zvonce
+                        [
+                            sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
+                            'isNotifying'
                         ]
                     ]
                 },
@@ -97,7 +137,6 @@ export const getTweetById = async (req, res) => {
                             attributes: [
                                 'id', 'username', 'displayName', 'avatar',
                                 [
-                                    // POPRAVAK: Ovdje koristimo samo `User` jer je ovo zaseban upit (zbog separate: true)
                                     sequelize.literal(`EXISTS(SELECT 1 FROM Follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                                     'isFollowing'
                                 ]
@@ -123,6 +162,7 @@ export const getTweetById = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 export const deleteTweet = async (req, res) => {
     try {
         const tweet = await Tweet.findByPk(req.params.id);
