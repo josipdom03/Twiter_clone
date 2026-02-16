@@ -11,7 +11,6 @@ import { User, Tweet, Comment, Follow } from '../models/index.js';
 
 export const seedDatabase = async () => {
   try {
-    // PROVJERA: Ako već imamo korisnike, ne seedaj ponovo
     const existingUsers = await User.count();
     if (existingUsers > 0) {
       console.log("ℹ️ Baza već sadrži podatke, preskačem seedanje.");
@@ -20,21 +19,25 @@ export const seedDatabase = async () => {
 
     console.log("--- Počinje seedanje baze podataka ---");
 
+    // --------------------------------------------------------
     // 1. KREIRAJ KORISNIKE
+    // --------------------------------------------------------
     const usersData = Array.from({ length: 100 }).map(() => ({
       username: faker.internet.userName().substring(0, 30),
       displayName: faker.person.fullName(),
       email: faker.internet.email(),
-      password: 'password123', 
+      password: 'password123',
       bio: faker.lorem.sentence(),
-      avatar: faker.image.avatar(),
+      avatar: faker.image.urlPicsumPhotos({ width: 200, height: 200 }),
       isVerified: faker.datatype.boolean(0.8),
     }));
-    
+
     const users = await User.bulkCreate(usersData);
     console.log(`✅ Kreirano ${users.length} korisnika.`);
 
+    // --------------------------------------------------------
     // 2. KREIRAJ TWEETOVE
+    // --------------------------------------------------------
     const tweetsData = [];
     users.forEach(user => {
       const tweetCount = faker.number.int({ min: 2, max: 5 });
@@ -42,20 +45,26 @@ export const seedDatabase = async () => {
         tweetsData.push({
           userId: user.id,
           content: faker.lorem.sentence({ min: 5, max: 15 }).substring(0, 280),
-          image: faker.datatype.boolean(0.3) ? faker.image.url() : null,
+          image: faker.datatype.boolean(0.3)
+            ? faker.image.urlPicsumPhotos({ width: 600, height: 400 })
+            : null,
         });
       }
     });
+
     const tweets = await Tweet.bulkCreate(tweetsData);
     console.log(`✅ Kreirano ${tweets.length} tweetova.`);
 
-    // 3. KREIRAJ FOLLOWERE
+    // --------------------------------------------------------
+    // 3. KREIRAJ FOLLOW ODNOS
+    // --------------------------------------------------------
     const followsData = [];
     users.forEach(user => {
       const toFollow = faker.helpers.arrayElements(
-        users.filter(u => u.id !== user.id), 
+        users.filter(u => u.id !== user.id),
         { min: 3, max: 8 }
       );
+
       toFollow.forEach(target => {
         followsData.push({
           follower_id: user.id,
@@ -64,13 +73,16 @@ export const seedDatabase = async () => {
         });
       });
     });
+
     await Follow.bulkCreate(followsData, { ignoreDuplicates: true });
     console.log("✅ Kreirani follow odnosi.");
 
-    // 4. KREIRAJ KOMENTARE
+    // --------------------------------------------------------
+    // 4. KREIRAJ KOMENTARE (više i realnije)
+    // --------------------------------------------------------
     const commentsData = [];
-    tweets.slice(0, 50).forEach(tweet => {
-      const commentCount = faker.number.int({ min: 1, max: 3 });
+    tweets.forEach(tweet => {
+      const commentCount = faker.number.int({ min: 3, max: 10 });
       for (let i = 0; i < commentCount; i++) {
         commentsData.push({
           content: faker.lorem.sentence(),
@@ -79,13 +91,60 @@ export const seedDatabase = async () => {
         });
       }
     });
-    await Comment.bulkCreate(commentsData);
+
+    const comments = await Comment.bulkCreate(commentsData);
+    console.log(`💬 Kreirano ${comments.length} komentara.`);
+
+    // --------------------------------------------------------
+    // 5. KREIRAJ TWEET LAJKOVE (TweetLikes pivot)
+    // --------------------------------------------------------
+    const tweetLikes = [];
+
+    tweets.forEach(tweet => {
+      const likeCount = faker.number.int({ min: 10, max: 40 });
+      const likedUsers = faker.helpers.arrayElements(users, likeCount);
+
+      likedUsers.forEach(user => {
+        tweetLikes.push({
+          tweet_id: tweet.id,
+          user_id: user.id
+        });
+      });
+    });
+
+    await Tweet.sequelize.models.TweetLikes.bulkCreate(tweetLikes, {
+      ignoreDuplicates: true
+    });
+
+    console.log(`❤️ Dodano ${tweetLikes.length} lajkova na tweetove.`);
+
+    // --------------------------------------------------------
+    // 6. KREIRAJ COMMENT LAJKOVE (CommentLikes pivot)
+    // --------------------------------------------------------
+    const commentLikes = [];
+
+    comments.forEach(comment => {
+      const likeCount = faker.number.int({ min: 5, max: 20 });
+      const likedUsers = faker.helpers.arrayElements(users, likeCount);
+
+      likedUsers.forEach(user => {
+        commentLikes.push({
+          comment_id: comment.id,
+          user_id: user.id
+        });
+      });
+    });
+
+    await Comment.sequelize.models.CommentLikes.bulkCreate(commentLikes, {
+      ignoreDuplicates: true
+    });
+
+    console.log(`👍 Dodano ${commentLikes.length} lajkova na komentare.`);
+
     console.log("--- Seedanje završeno uspješno! ---");
-    
-    // OVDJE VIŠE NEMA process.exit(0)
+
   } catch (error) {
     console.error("❌ Greška pri seedanju:", error);
-    // Ne gasimo proces, samo dopuštamo inicijalizaciji da javi grešku
-    throw error; 
+    throw error;
   }
 };

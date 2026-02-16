@@ -1,13 +1,21 @@
-/* home.css */
-
+/* --- LAYOUT & MAIN WRAPPER --- */
 .home-main-wrapper {
-    margin-left: 260px; /* KLJUČNO: Ostavlja prostor za tvoj Sidebar */
+    margin-left: 260px;
     min-height: 100vh;
     background-color: #ffffff;
     border-right: 1px solid #eff3f4;
-    max-width: 600px; /* Ograničavamo širinu feeda kao na X-u */
+    max-width: 600px;
 }
 
+@media (max-width: 700px) {
+    .home-main-wrapper {
+        margin-left: 0;
+        max-width: 100%;
+        border-right: none;
+    }
+}
+
+/* --- HEADER --- */
 .home-header {
     height: 53px;
     display: flex;
@@ -28,10 +36,381 @@
     color: #0f1419;
 }
 
-.home-content {
-    padding: 20px;
+/* --- TWEET BOX --- */
+.tweet-box-container {
+    display: flex;
+    padding: 16px;
+    border-bottom: 1px solid #eff3f4;
+    background-color: #ffffff;
 }
 
+.tweet-box-avatar {
+    width: 48px;
+    height: 48px;
+    background-color: #cfd9de;
+    border-radius: 50%;
+    margin-right: 12px;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.tweet-box-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.tweet-box-main textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 20px;
+    font-family: inherit;
+    resize: none;
+    padding: 10px 0;
+    color: #0f1419;
+    background: transparent;
+}
+
+.tweet-box-main textarea::placeholder {
+    color: #536471;
+}
+
+.tweet-post-btn {
+    align-self: flex-end;
+    background-color: #1d9bf0;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.tweet-post-btn:hover {
+    background-color: #1a8cd8;
+}
+
+.tweet-post-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- TWEET BOX FOOTER --- */
+.tweet-box-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    border-top: 1px solid #eff3f4;
+    padding-top: 12px;
+}
+
+.tweet-actions-left {
+    display: flex;
+    gap: 8px;
+}
+
+.image-upload-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1d9bf0;
+    padding: 8px 12px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.image-upload-btn:hover {
+    background-color: rgba(29, 155, 240, 0.1);
+}
+
+/* --- PREVIEW SLIKA --- */
+.image-preview-container {
+    margin: 12px 0;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #eff3f4;
+    background-color: #f7f9f9;
+}
+
+.image-preview-container.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    background-color: #000;
+}
+
+.image-preview {
+    position: relative;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.remove-image-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    z-index: 2;
+}
+
+.remove-image-btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* --- LOADING SPINNER --- */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #eff3f4;
+    border-top-color: #1d9bf0;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- TWEET STYLES --- */
+.tweet {
+    padding: 16px;
+    border-bottom: 1px solid #eff3f4;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.tweet:hover {
+    background-color: rgba(0, 0, 0, 0.01);
+}
+
+.tweet-content-wrapper {
+    display: flex;
+    gap: 12px;
+}
+
+.tweet-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #cfd9de;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.tweet-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.tweet-header {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
+.tweet-display-name {
+    font-weight: 800;
+    color: #0f1419;
+    text-decoration: none;
+}
+
+.tweet-display-name:hover {
+    text-decoration: underline;
+}
+
+.tweet-username {
+    color: #536471;
+    font-size: 15px;
+    font-weight: 400;
+    text-decoration: none;
+}
+
+.tweet-username:hover {
+    text-decoration: underline;
+}
+
+.tweet-dot {
+    color: #536471;
+    padding: 0 4px;
+}
+
+.tweet-time {
+    color: #536471;
+    font-size: 15px;
+}
+
+.tweet-content {
+    color: #0f1419;
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* --- MEDIA CONTAINER - OVO JE KLJUČNO ZA SLIKE --- */
+.tweet-media-container {
+    margin: 12px 0 8px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #eff3f4;
+    background-color: #f7f9f9;
+    width: 100%;
+}
+
+/* Grid za više slika - OVO JE BITNO */
+.tweet-media-grid {
+    display: grid;
+    gap: 2px;
+    background-color: #000;
+    width: 100%;
+}
+
+/* Jedna slika */
+.tweet-media-single {
+    width: 100%;
+    max-height: 510px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f7f9f9;
+}
+
+.tweet-media-single img {
+    width: 100%;
+    height: auto;
+    max-height: 510px;
+    object-fit: contain;
+    display: block;
+}
+
+/* 2 slike */
+.tweet-media-grid.grid-2 {
+    grid-template-columns: 1fr 1fr;
+    aspect-ratio: 16/9;
+}
+
+/* 3 slike - layout kao na Twitteru */
+.tweet-media-grid.grid-3 {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    aspect-ratio: 16/9;
+}
+
+.tweet-media-grid.grid-3 img:first-child {
+    grid-row: span 2;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+
+.tweet-media-grid.grid-3 img:nth-child(2),
+.tweet-media-grid.grid-3 img:nth-child(3) {
+    grid-column: 2;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+
+/* 4 slike */
+.tweet-media-grid.grid-4 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    aspect-ratio: 1/1;
+}
+
+.tweet-media-grid img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Hover efekat - opcionalno */
+.tweet-media-single img:hover,
+.tweet-media-grid img:hover {
+    opacity: 0.95;
+    transition: opacity 0.2s ease;
+}
+
+/* --- TWEET ACTIONS --- */
+.tweet-actions {
+    display: flex;
+    justify-content: space-between;
+    max-width: 425px;
+    margin-top: 12px;
+}
+
+.tweet-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #536471;
+    font-size: 13px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 9999px;
+    transition: all 0.2s;
+}
+
+.tweet-action svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+.tweet-action:hover {
+    background-color: rgba(29, 155, 240, 0.1);
+    color: #1d9bf0;
+}
+
+.tweet-action.like:hover {
+    color: #f91880;
+    background-color: rgba(249, 24, 128, 0.1);
+}
+
+.tweet-action.like.liked {
+    color: #f91880;
+}
+
+.tweet-action.like.liked svg {
+    fill: #f91880;
+    stroke: #f91880;
+}
+
+/* --- WELCOME CARD --- */
 .welcome-card {
     padding: 40px 20px;
     text-align: center;
@@ -42,6 +421,7 @@
     font-size: 31px;
     font-weight: 800;
     margin-bottom: 10px;
+    color: #0f1419;
 }
 
 .status-text {
@@ -52,18 +432,6 @@
 .highlight-user {
     color: #1d9bf0;
     font-weight: bold;
-}
-
-/* Tipke za logout/auth */
-.logout-btn {
-    background-color: #f4212e; /* Crvena za logout */
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 9999px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 20px;
 }
 
 .auth-actions {
@@ -85,9 +453,33 @@
     color: white;
 }
 
+.login-link:hover {
+    background-color: #1a8cd8;
+}
+
 .register-link {
     border: 1px solid #cfd9de;
     color: #1d9bf0;
+}
+
+.register-link:hover {
+    background-color: rgba(29, 155, 240, 0.1);
+}
+
+.logout-btn {
+    background-color: #f4212e;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 9999px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background-color 0.2s;
+}
+
+.logout-btn:hover {
+    background-color: #dc0f1c;
 }
 
 .feed-placeholder {
@@ -95,101 +487,66 @@
     text-align: center;
     color: #536471;
     font-style: italic;
-}/* home.css - dodatak za Tweet Box */
+}
 
-.tweet-box-container {
+/* --- TWEET DETAIL MODAL --- */
+.tweet-detail-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
     display: flex;
-    padding: 16px;
-    border-bottom: 1px solid #eff3f4;
-    background-color: #ffffff;
-}
-
-.tweet-box-avatar {
-    width: 48px;
-    height: 48px;
-    background-color: #cfd9de;
-    border-radius: 50%;
-    margin-right: 12px;
-    flex-shrink: 0;
-}
-
-.tweet-box-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.tweet-box-main textarea {
-    width: 100%;
-    border: none;
-    outline: none;
-    font-size: 20px;
-    font-family: inherit;
-    resize: none;
-    padding: 10px 0;
-    color: #0f1419;
-}
-
-.tweet-box-main textarea::placeholder {
-    color: #536471;
-}
-
-.tweet-box-footer {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    border-top: 1px solid #eff3f4;
-    padding-top: 12px;
-    margin-top: 5px;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
 }
 
-.tweet-icons {
-    display: flex;
-    gap: 15px;
-    color: #1d9bf0;
-    cursor: pointer;
-    font-size: 18px;
+.tweet-detail-modal {
+    background-color: white;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    border-radius: 16px;
+    overflow-y: auto;
+    position: relative;
 }
 
-.tweet-post-btn {
-    background-color: #1d9bf0;
-    color: white;
+.close-button {
+    position: sticky;
+    top: 8px;
+    right: 8px;
+    float: right;
+    background: rgba(255, 255, 255, 0.9);
     border: none;
-    padding: 8px 18px;
-    border-radius: 9999px;
-    font-weight: 700;
-    font-size: 15px;
+    font-size: 20px;
     cursor: pointer;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px;
+    z-index: 10;
     transition: background-color 0.2s;
 }
 
-.tweet-post-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
+.close-button:hover {
+    background-color: #eff3f4;
 }
 
-.tweet-post-btn:not(:disabled):hover {
-    background-color: #1a8cd8;
-}
-
-/*Klik na usera*/
-.tweet-user-link {
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    gap: 4px;
-}
-
-.tweet-user-link:hover .tweet-display-name {
-    text-decoration: underline;
-}
-
-.tweet-display-name {
-    font-weight: 800;
-    color: #0f1419;
-}
-
-.tweet-username {
-    color: #536471;
-    font-weight: 400;
+/* Responsive */
+@media (max-width: 500px) {
+    .tweet-box-footer {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .tweet-post-btn {
+        width: 100%;
+    }
 }

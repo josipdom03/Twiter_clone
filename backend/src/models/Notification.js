@@ -3,7 +3,7 @@ import sequelize from '../config/database.js';
 
 const Notification = sequelize.define('Notification', {
   type: {
-    type: DataTypes.ENUM('like', 'comment', 'follow', 'new_tweet', 'message'),
+    type: DataTypes.ENUM('like', 'follow', 'comment_like', 'retweet', 'message'),
     allowNull: false
   },
   isRead: {

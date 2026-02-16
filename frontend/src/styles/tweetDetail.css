@@ -13,13 +13,19 @@
 
 .tweet-modal-content {
     background: white;
-    width: 100%;
+    width: 90%; /* Bolje za mobilne uređaje */
     max-width: 600px;
     border-radius: 16px;
     padding: 20px;
     position: relative;
     max-height: 90vh;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-scroll-area {
+    overflow-y: auto; /* Skrolanje samo unutar sadržaja, ne cijelog modala */
+    padding-right: 5px; /* Da scrollbar ne prekriva tekst */
 }
 
 .close-modal-btn {
@@ -414,5 +420,12 @@
 
 /* Dodajemo tekst "Otprati" na hover ako već pratimo */
 .modal-follow-btn-small.following:hover::after {
-    content: ""; /* Možeš ostaviti prazno ili promijeniti tekst putem JS-a */
+    content: ""; 
+}
+
+.c-like-btn {
+    position: relative;
+    z-index: 10;
+    cursor: pointer !important; /* Prisili kursor na pointer */
+    padding: 5px; /* Povećaj zonu klika */
 }

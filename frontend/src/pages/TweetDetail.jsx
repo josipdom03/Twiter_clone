@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../stores/AuthStore';
 import axios from 'axios';
-import { io } from 'socket.io-client'; // DODANO: Socket klijent
+import { io } from 'socket.io-client';
 import '../styles/tweetDetail.css';
 
-// Inicijalizacija socketa (pazi na port tvog servera)
 const socket = io('http://localhost:3000', { transports: ['websocket'] });
 
 const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
@@ -16,22 +15,22 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(false);
     
+    // Modali i Tooltipi
     const [showLikesModal, setShowLikesModal] = useState(false);
     const [isHoveringLikes, setIsHoveringLikes] = useState(false);
+    
+    // NOVO: Stanja za modal lajkova KOMENTARA
+    const [showCommentLikesModal, setShowCommentLikesModal] = useState(false);
+    const [commentLikesList, setCommentLikesList] = useState([]);
 
-    // Glavni efekt za dohvat podataka i Socket slušalice
     useEffect(() => {
         if (initialTweet?.id) {
             fetchFreshTweetData();
 
-            // --- SOCKET LOGIKA ---
-            // Slušamo 'user_followed' događaj s backenda
             socket.on('user_followed', (data) => {
-                // Ako je netko zapratio autora tweeta ili nekoga u listi lajkova, osvježi
                 fetchFreshTweetData();
             });
 
-            // Slušamo nove lajkove u realnom vremenu
             socket.on('tweet_updated', (updatedTweetId) => {
                 if (updatedTweetId === initialTweet.id) {
                     fetchFreshTweetData();
@@ -47,7 +46,6 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
 
     const fetchFreshTweetData = async () => {
         try {
-            // Jako važno: Šaljemo token kako bi backend znao tvoj 'isFollowing' status
             const response = await axios.get(`http://localhost:3000/api/tweets/${initialTweet.id}`, {
                 headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
             });
@@ -66,18 +64,16 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
 
     const handleToggleFollow = async (userId, isCurrentlyFollowing) => {
         if (!authStore.isAuthenticated) return alert("Moraš biti prijavljen!");
-        
         try {
             if (isCurrentlyFollowing) {
-                await axios.delete(`http://localhost:3000/api/users/${userId}/unfollow`, {
+                await axios.delete(`http://localhost:3000/api/follow/${userId}`, {
                     headers: { Authorization: `Bearer ${authStore.token}` }
                 });
             } else {
-                await axios.post(`http://localhost:3000/api/users/${userId}/follow`, {}, {
+                await axios.post(`http://localhost:3000/api/follow/${userId}`, {}, {
                     headers: { Authorization: `Bearer ${authStore.token}` }
                 });
             }
-            // Odmah osvježavamo lokalno za najbolji UX
             fetchFreshTweetData();
         } catch (err) {
             console.error("Greška kod promjene statusa praćenja:", err);
@@ -113,6 +109,23 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                 { headers: { Authorization: `Bearer ${authStore.token}` } });
             fetchFreshTweetData();
         } catch (err) { console.error(err); }
+    };
+
+    const handleOpenCommentLikes = async (commentId) => {
+        console.log("Dohvaćam lajkove za komentar ID:", commentId); // OVO DODAJ
+        if (!commentId) {
+            console.error("Greška: commentId je undefined!");
+            return;
+        }
+        try {
+            const res = await axios.get(`http://localhost:3000/api/comments/${commentId}/likes`, {
+                headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+            });
+            setCommentLikesList(res.data);
+            setShowCommentLikesModal(true);
+        } catch (err) {
+            console.error("Greška pri dohvatu lajkova komentara:", err);
+        }
     };
 
     const renderLikesTooltip = () => {
@@ -212,7 +225,6 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                                                 <span className="comment-username">@{comment.User?.username}</span>
                                             </div>
                                             
-                                            {/* DODANO: Gumb za follow i na komentarima */}
                                             {authStore.isAuthenticated && !isOwnComment && (
                                                 <button 
                                                     className={`modal-follow-btn-tiny ${comment.User?.isFollowing ? 'following' : ''}`}
@@ -224,8 +236,16 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                                         </div>
                                         <p className="comment-text">{comment.content}</p>
                                         <div className="comment-actions">
+                                            {/* NADOGRAĐENO: Klik na srce lajka, klik na broj otvara listu korisnika */}
                                             <span className={`c-like-btn ${isCommentLiked ? 'active' : ''}`} onClick={() => handleLikeComment(comment.id)}>
-                                                {isCommentLiked ? '❤️' : '🤍'} {comment.LikedByUsers?.length || 0}
+                                                {isCommentLiked ? '❤️' : '🤍'} 
+                                            </span>
+                                            <span 
+                                                className="comment-likes-count clickable" 
+                                                onClick={() => handleOpenCommentLikes(comment.id)}
+                                                style={{ marginLeft: '5px', fontSize: '14px', cursor: 'pointer' }}
+                                            >
+                                                {comment.LikedByUsers?.length || 0}
                                             </span>
                                         </div>
                                     </div>
@@ -235,6 +255,7 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                     </div>
                 </div>
 
+                {/* MODAL ZA LAJKOVE TWEETA */}
                 {showLikesModal && (
                     <div className="likes-full-modal-overlay" onClick={() => setShowLikesModal(false)}>
                         <div className="likes-full-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -255,7 +276,49 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                                                         <p className="row-username">@{u.username}</p>
                                                     </div>
                                                 </div>
+                                                {authStore.isAuthenticated && !isOwnAccount && (
+                                                    <button 
+                                                        className={`modal-follow-btn-small ${u.isFollowing ? 'following' : ''}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleFollow(u.id, u.isFollowing);
+                                                        }}
+                                                    >
+                                                        {u.isFollowing ? 'Pratim' : 'Prati'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <p className="no-likes">Još nema lajkova.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
+                {/* NOVO: MODAL ZA LAJKOVE KOMENTARA (Isti stil kao gore) */}
+                {showCommentLikesModal && (
+                    <div className="likes-full-modal-overlay" onClick={() => setShowCommentLikesModal(false)}>
+                        <div className="likes-full-modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="likes-modal-header">
+                                <h3>Komentar se sviđa korisnicima</h3>
+                                <button className="close-small-btn" onClick={() => setShowCommentLikesModal(false)}>&times;</button>
+                            </div>
+                            <div className="likes-list-scroll">
+                                {commentLikesList.length > 0 ? (
+                                    commentLikesList.map(u => {
+                                        const isOwnAccount = authStore.user?.id === u.id;
+                                        return (
+                                            <div key={u.id} className="like-user-row-container">
+                                                <div className="like-user-row searchable" onClick={() => goToProfile(u.username)}>
+                                                    <img src={u.avatar || '/default-avatar.png'} alt="" className="user-row-avatar" />
+                                                    <div className="user-row-info">
+                                                        <p className="row-display-name">{u.displayName || u.username}</p>
+                                                        <p className="row-username">@{u.username}</p>
+                                                    </div>
+                                                </div>
                                                 {authStore.isAuthenticated && !isOwnAccount && (
                                                     <button 
                                                         className={`modal-follow-btn-small ${u.isFollowing ? 'following' : ''}`}

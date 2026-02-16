@@ -88,13 +88,15 @@ app.use((req, res, next) => {
 });
 
 // --- RUTE ---
+
+app.use('/api/follow', followRoutes);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tweets', tweetRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/message', messageRoutes);
-app.use('/api/follow', followRoutes);
 app.use('/api/notifications',notificationRoutes);
 
 app.get('/', (req, res) => {
