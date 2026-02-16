@@ -103,14 +103,26 @@ app.get('/', (req, res) => {
 
 // --- 3. START SERVERA ---
 const PORT = process.env.PORT || 3000;
+import { initializeDatabase } from './db-init.js';
 
-sequelize.sync({ alter: true })
-  .then(() => {
-    console.log('MySQL tablice sinkronizirane.');
-    httpServer.listen(PORT, () => {
-      console.log(`Server radi na portu ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('Greška pri sinkronizaciji baze:', err);
-  });
+const startServer = async () => {
+  try {
+    // Pozivamo inicijalizaciju prije paljenja servera
+    // 'false' znači da NEĆE brisati podatke svaki put kad se restartira backend
+    const dbReady = await initializeDatabase(false);
+
+    if (dbReady) {
+      httpServer.listen(PORT, () => {
+        console.log(`🚀 Server uspješno pokrenut na portu ${PORT}`);
+      });
+    } else {
+      console.error('🛑 Server se gasi jer baza nije spremna.');
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('❌ Greška pri startu:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
