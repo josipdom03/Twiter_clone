@@ -161,6 +161,20 @@ class AuthStore {
         console.error("Greška pri odgovoru na zahtjev", err);
     }
 }
+
+
+suggestions = [];
+
+fetchSuggestions = async () => {
+    try {
+        const res = await axios.get('http://localhost:3000/api/suggestions/', {
+            headers: { Authorization: `Bearer ${this.token}` }
+        });
+        this.suggestions = res.data;
+    } catch (err) {
+        console.error("Greška pri dohvaćanju prijedloga", err);
+    }
+};
 }
 
 export const authStore = new AuthStore();

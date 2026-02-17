@@ -1,15 +1,15 @@
 /* --- LAYOUT & MAIN WRAPPER --- */
 .home-main-wrapper {
-    margin-left: 260px;
+    width: 100%;
+    max-width: 600px;
     min-height: 100vh;
     background-color: #ffffff;
     border-right: 1px solid #eff3f4;
-    max-width: 600px;
+    margin: 0 auto;  /* OVO JE KLJUČNO - centriranje */
 }
 
 @media (max-width: 700px) {
     .home-main-wrapper {
-        margin-left: 0;
         max-width: 100%;
         border-right: none;
     }
@@ -111,6 +111,7 @@
 .tweet-actions-left {
     display: flex;
     gap: 8px;
+    align-items: center;
 }
 
 .image-upload-btn {
@@ -128,6 +129,16 @@
 
 .image-upload-btn:hover {
     background-color: rgba(29, 155, 240, 0.1);
+}
+
+.image-upload-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.image-count {
+    font-size: 13px;
+    color: #536471;
 }
 
 /* --- PREVIEW SLIKA --- */
@@ -548,5 +559,12 @@
     
     .tweet-post-btn {
         width: 100%;
+    }
+}
+
+@media (max-width: 700px) {
+    .home-main-wrapper {
+        margin: 0;
+        border-right: none;
     }
 }
