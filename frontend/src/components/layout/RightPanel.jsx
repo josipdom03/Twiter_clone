@@ -17,7 +17,6 @@ const RightPanel = observer(() => {
         e.stopPropagation();
         try {
             await authStore.followUser(userId);
-            // Osvježi prijedloge nakon praćenja
             authStore.fetchSuggestions();
         } catch (err) {
             console.error("Greška pri praćenju:", err);
@@ -30,15 +29,15 @@ const RightPanel = observer(() => {
 
     return (
         <div className="right-panel-wrapper">
-            {/* PRETRAGA */}
+            {/* STATIČNI SEARCH KOJI VODI NA NOVU STRANICU */}
             <div className="search-container-sticky">
-                <div className="search-input-wrapper">
+                <div 
+                    className="search-input-wrapper clickable-search" 
+                    onClick={() => navigate('/search')}
+                    style={{ cursor: 'pointer' }}
+                >
                     <span className="search-icon">🔍</span>
-                    <input 
-                        type="text" 
-                        placeholder="Pretraži" 
-                        aria-label="Pretraži"
-                    />
+                    <span className="search-placeholder-text">Pretraži</span>
                 </div>
             </div>
 
@@ -60,23 +59,22 @@ const RightPanel = observer(() => {
                     title="Dora 2024" 
                     tweets="3.2K" 
                 />
-                <button className="show-more-link">
+                <button className="show-more-link" onClick={() => navigate('/explore')}>
                     Prikaži više
                 </button>
             </div>
 
-            {/* KOGO PRATITI SEKCIJA */}
+            {/* KOGA PRATITI SEKCIJA */}
             <div className="right-section-card">
                 <h2 className="section-title">Koga pratiti</h2>
                 {authStore.suggestions?.length > 0 ? (
                     authStore.suggestions.map((user) => (
                         <div 
                             key={user.id} 
-                            className="item-hover"
+                            className="item-hover user-suggestion-item"
                             onClick={() => handleUserClick(user.username)}
                         >
                             <div className="flex-items">
-                                {/* Avatar */}
                                 {user.avatar ? (
                                     <img 
                                         src={`http://localhost:3000/${user.avatar}`} 
@@ -94,7 +92,6 @@ const RightPanel = observer(() => {
                                     </div>
                                 )}
                                 
-                                {/* Korisnički podaci */}
                                 <div className="user-info">
                                     <span className="user-name">
                                         {user.displayName || user.username}
@@ -105,7 +102,6 @@ const RightPanel = observer(() => {
                                 </div>
                             </div>
                             
-                            {/* Follow button */}
                             <button 
                                 onClick={(e) => handleFollow(e, user.id)} 
                                 className="follow-btn"
@@ -124,7 +120,6 @@ const RightPanel = observer(() => {
     );
 });
 
-// TrendItem komponenta
 const TrendItem = ({ category, title, tweets }) => (
     <div className="item-hover">
         <div>

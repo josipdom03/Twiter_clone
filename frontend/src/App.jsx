@@ -14,6 +14,7 @@ import Messages from './pages/Messages';
 import ChatDetail from './pages/ChatDetails';
 import Sidebar from './components/layout/Sidebar';
 import RightPanel from './components/layout/RightPanel';
+import Search from './pages/Search';
 
 // CSS
 import './index.css';
@@ -58,6 +59,7 @@ const App = observer(() => {
             <Route path="/messages/:userId" element={isAuthenticated ? <ChatDetail /> : <Navigate to="/login" />} />
             <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
             <Route path="/profile/:username" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+            <Route path="/search" element={isAuthenticated ? <Search /> : <Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>

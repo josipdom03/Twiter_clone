@@ -2,6 +2,7 @@ import { User, Tweet,Comment,FollowRequest } from '../models/index.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { Op } from 'sequelize';
 
 // --- KONFIGURACIJA MULTERA (Ostaje ista) ---
 const uploadDir = 'uploads/';
@@ -155,5 +156,38 @@ export const getUserById = async (req, res) => {
         res.json(user);
     } catch (error) {
         res.status(500).json({ message: 'Greška na serveru', error: error.message });
+    }
+
+};
+
+export const searchUsers = async (req, res) => {
+    try {
+        const { query } = req.query; 
+        const currentUserId = req.user?.id;
+
+        if (!query) {
+            return res.json([]); 
+        }
+
+        const users = await User.findAll({
+            where: {
+                [Op.and]: [
+                    {
+                        [Op.or]: [
+                            { username: { [Op.like]: `%${query}%` } }, // POPRAVLJENO: Op.like umjesto Op.Like
+                            { displayName: { [Op.like]: `%${query}%` } } // POPRAVLJENO: Op.like
+                        ]
+                    },
+                    { id: { [Op.ne]: currentUserId } } // Isključuješ sebe iz pretrage
+                ]
+            },
+            attributes: ['id', 'username', 'displayName', 'avatar', 'isPrivate'],
+            limit: 10 
+        });
+
+        res.json(users);
+    } catch (error) {
+        console.error("Greška u searchUsers:", error);
+        res.status(500).json({ message: 'Greška pri pretrazi korisnika' });
     }
 };
