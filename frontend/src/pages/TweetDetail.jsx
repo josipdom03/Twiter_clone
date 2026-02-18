@@ -15,11 +15,9 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(false);
     
-    // Modali i Tooltipi
     const [showLikesModal, setShowLikesModal] = useState(false);
     const [isHoveringLikes, setIsHoveringLikes] = useState(false);
     
-    // NOVO: Stanja za modal lajkova KOMENTARA
     const [showCommentLikesModal, setShowCommentLikesModal] = useState(false);
     const [commentLikesList, setCommentLikesList] = useState([]);
 
@@ -60,6 +58,31 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
         if (!username) return;
         onClose(); 
         navigate(`/profile/${username}`);
+    };
+
+    // FUNKCIJA ZA PRETVARANJE HASHTAGOVA U LINKOVE
+    const renderContent = (text) => {
+        if (!text) return "";
+        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith("#")) {
+                return (
+                    <span 
+                        key={index} 
+                        className="hashtag-link" 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose(); // Zatvaramo modal prije navigacije
+                            navigate(`/search?q=${encodeURIComponent(part)}`);
+                        }}
+                        style={{ color: '#1d9bf0', cursor: 'pointer', fontWeight: 'inherit' }}
+                    >
+                        {part}
+                    </span>
+                );
+            }
+            return part;
+        });
     };
 
     const handleToggleFollow = async (userId, isCurrentlyFollowing) => {
@@ -112,11 +135,7 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
     };
 
     const handleOpenCommentLikes = async (commentId) => {
-        console.log("Dohvaćam lajkove za komentar ID:", commentId); // OVO DODAJ
-        if (!commentId) {
-            console.error("Greška: commentId je undefined!");
-            return;
-        }
+        if (!commentId) return;
         try {
             const res = await axios.get(`http://localhost:3000/api/comments/${commentId}/likes`, {
                 headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
@@ -175,7 +194,8 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                     </div>
 
                     <div className="modal-tweet-body">
-                        <p className="modal-tweet-text">{tweet.content}</p>
+                        {/* DODANO: renderContent za glavni tweet */}
+                        <p className="modal-tweet-text">{renderContent(tweet.content)}</p>
                         {tweet.image && <img src={tweet.image} alt="Tweet" className="modal-tweet-image" />}
                         <div className="modal-date-footer">{new Date(tweet.createdAt).toLocaleString()}</div>
                     </div>
@@ -234,9 +254,9 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                                                 </button>
                                             )}
                                         </div>
-                                        <p className="comment-text">{comment.content}</p>
+                                        {/* DODANO: renderContent za komentare */}
+                                        <p className="comment-text">{renderContent(comment.content)}</p>
                                         <div className="comment-actions">
-                                            {/* NADOGRAĐENO: Klik na srce lajka, klik na broj otvara listu korisnika */}
                                             <span className={`c-like-btn ${isCommentLiked ? 'active' : ''}`} onClick={() => handleLikeComment(comment.id)}>
                                                 {isCommentLiked ? '❤️' : '🤍'} 
                                             </span>
@@ -255,7 +275,8 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                     </div>
                 </div>
 
-                {/* MODAL ZA LAJKOVE TWEETA */}
+                {/* MODALI ZA LAJKOVE (Tweet i Komentari) su ostali isti kao u tvom kodu... */}
+                {/* ... (ostatak koda za modale lajkova) ... */}
                 {showLikesModal && (
                     <div className="likes-full-modal-overlay" onClick={() => setShowLikesModal(false)}>
                         <div className="likes-full-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -298,7 +319,6 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                     </div>
                 )}
 
-                {/* NOVO: MODAL ZA LAJKOVE KOMENTARA (Isti stil kao gore) */}
                 {showCommentLikesModal && (
                     <div className="likes-full-modal-overlay" onClick={() => setShowCommentLikesModal(false)}>
                         <div className="likes-full-modal-content" onClick={(e) => e.stopPropagation()}>

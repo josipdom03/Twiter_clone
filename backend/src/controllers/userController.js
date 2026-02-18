@@ -159,35 +159,48 @@ export const getUserById = async (req, res) => {
     }
 
 };
-
-export const searchUsers = async (req, res) => {
+export const searchGeneral = async (req, res) => {
     try {
-        const { query } = req.query; 
+        const { query } = req.query;
         const currentUserId = req.user?.id;
 
-        if (!query) {
-            return res.json([]); 
+        if (!query) return res.json({ users: [], tweets: [] });
+
+        // Provjera radi li se o hashtagu
+        if (query.startsWith('#')) {
+            const tweets = await Tweet.findAll({
+                where: { content: { [Op.like]: `%${query}%` } },
+                include: [
+                    { model: User, attributes: ['id', 'username', 'displayName', 'avatar'] },
+                    { model: User, as: 'LikedByUsers', attributes: ['id'], thorough: 'Likes' }, // Za broj lajkova
+                    { model: Comment, attributes: ['id'] } // Za broj komentara
+                ],
+                order: [['createdAt', 'DESC']],
+                limit: 20
+            });
+            return res.json({ type: 'posts', data: tweets });
         }
 
+        // Standardna pretraga korisnika
         const users = await User.findAll({
             where: {
                 [Op.and]: [
                     {
                         [Op.or]: [
-                            { username: { [Op.like]: `%${query}%` } }, // POPRAVLJENO: Op.like umjesto Op.Like
-                            { displayName: { [Op.like]: `%${query}%` } } // POPRAVLJENO: Op.like
+                            { username: { [Op.like]: `%${query}%` } },
+                            { displayName: { [Op.like]: `%${query}%` } }
                         ]
                     },
-                    { id: { [Op.ne]: currentUserId } } // Isključuješ sebe iz pretrage
+                    { id: { [Op.ne]: currentUserId } }
                 ]
             },
             attributes: ['id', 'username', 'displayName', 'avatar', 'isPrivate'],
             limit: 10 
         });
 
-        res.json(users);
+        res.json({ type: 'users', data: users });
     } catch (error) {
-        console.error("Greška u searchUsers:", error);
-        res.status(500).json({ message: 'Greška pri pretrazi korisnika' });
+        console.error("Greška u search:", error);
+        res.status(500).json({ message: 'Greška pri pretrazi' });
     }
 };

@@ -1,11 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
-import { authStore } from '../../stores/AuthStore'; // Provjeri jesu li ovdje dvije točke (../..)
+import { authStore } from '../../stores/AuthStore'; 
 import axios from 'axios';
 
-// KLJUČNO: Mora pisati "export const Tweet"
 export const Tweet = observer(({ tweet, onOpen, onLikeUpdate }) => {
+    const navigate = useNavigate();
     const isLiked = tweet.LikedByUsers?.some(u => u.id === authStore.user?.id);
 
     const handleLike = async (e) => {
@@ -27,6 +27,33 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate }) => {
         }
     };
 
+    // FUNKCIJA ZA PRIKAZ HASHTAGOVA
+    const renderContent = (text) => {
+        if (!text) return "";
+        
+        // Splitamo tekst pomoću regexa koji prepoznaje hashtagove
+        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+)/g);
+        
+        return parts.map((part, index) => {
+            if (part.startsWith("#")) {
+                return (
+                    <span 
+                        key={index} 
+                        className="hashtag-link" 
+                        onClick={(e) => {
+                            e.stopPropagation(); // Da ne otvori cijeli tweet modal
+                            navigate(`/search?q=${encodeURIComponent(part)}`);
+                        }}
+                        style={{ color: '#1d9bf0', cursor: 'pointer' }}
+                    >
+                        {part}
+                    </span>
+                );
+            }
+            return part;
+        });
+    };
+
     return (
         <div className="tweet-item" onClick={() => onOpen(tweet)} style={{ cursor: 'pointer' }}>
             <div className="tweet-avatar-placeholder" onClick={(e) => e.stopPropagation()}>
@@ -46,7 +73,11 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate }) => {
                     </Link>
                     <span className="tweet-date"> • {new Date(tweet.createdAt).toLocaleDateString()}</span>
                 </div>
-                <p className="tweet-text">{tweet.content}</p>
+
+                {/* PROMIJENJENO: Ovdje sada pozivamo renderContent */}
+                <p className="tweet-text">
+                    {renderContent(tweet.content)}
+                </p>
                 
                 {tweet.image && (
                     <div className="tweet-image-container">

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProfile, updateProfile, upload, getUserByUsername,getUserById,searchUsers } from '../controllers/userController.js';
+import { getProfile, updateProfile, upload, getUserByUsername,getUserById,searchGeneral } from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -14,6 +14,6 @@ router.get('/u/:username', authMiddleware, getUserByUsername);
 router.get('/id/:id',getUserById);
 
 
-router.get('/search', authMiddleware, searchUsers);
+router.get('/search', authMiddleware, searchGeneral);
 
 export default router;
