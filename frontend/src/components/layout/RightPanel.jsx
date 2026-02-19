@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { authStore } from '../../stores/AuthStore';
@@ -7,9 +7,13 @@ import '../../styles/rightPanel.css';
 const RightPanel = observer(() => {
     const navigate = useNavigate();
 
+    // Lokalno stanje koje određuje koliko trendova trenutno prikazujemo
+    const [visibleTrendsCount, setVisibleTrendsCount] = useState(5);
+
     useEffect(() => {
         if (authStore.token) {
             authStore.fetchSuggestions();
+            authStore.fetchTrends(); 
         }
     }, []);
 
@@ -27,9 +31,21 @@ const RightPanel = observer(() => {
         navigate(`/profile/${username}`);
     };
 
+    const handleTrendClick = (tag) => {
+        navigate(`/search?q=${encodeURIComponent(tag)}`);
+    };
+
+    // Funkcija za povećanje limita prikaza za 5
+    const handleShowMoreTrends = () => {
+        setVisibleTrendsCount((prev) => prev + 5);
+    };
+
+    // Uzimamo samo onoliko trendova koliko dopušta visibleTrendsCount
+    const displayedTrends = authStore.trends ? authStore.trends.slice(0, visibleTrendsCount) : [];
+
     return (
         <div className="right-panel-wrapper">
-            {/* STATIČNI SEARCH KOJI VODI NA NOVU STRANICU */}
+            {/* SEARCH */}
             <div className="search-container-sticky">
                 <div 
                     className="search-input-wrapper clickable-search" 
@@ -41,27 +57,35 @@ const RightPanel = observer(() => {
                 </div>
             </div>
 
-            {/* TRENDING SEKCIJA */}
+            {/* DINAMIČNI TRENDOVI */}
             <div className="right-section-card">
                 <h2 className="section-title">Što se događa</h2>
-                <TrendItem 
-                    category="Tehnologija · Trend" 
-                    title="#JavaScript" 
-                    tweets="12.5K" 
-                />
-                <TrendItem 
-                    category="Sport · Trend" 
-                    title="Hajduk" 
-                    tweets="5.8K" 
-                />
-                <TrendItem 
-                    category="Glazba · Trend" 
-                    title="Dora 2024" 
-                    tweets="3.2K" 
-                />
-                <button className="show-more-link" onClick={() => navigate('/explore')}>
-                    Prikaži više
-                </button>
+                
+                {displayedTrends.length > 0 ? (
+                    displayedTrends.map((trend) => (
+                        <div 
+                            key={trend.tag} 
+                            className="item-hover trend-clickable" 
+                            onClick={() => handleTrendClick(trend.tag)}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            <p className="trend-category">Trend u zadnjih 10 dana</p>
+                            <p className="trend-title">{trend.tag}</p>
+                            <p className="trend-stat">{trend.count} posts</p>
+                        </div>
+                    ))
+                ) : (
+                    <p className="empty-state-text" style={{ padding: '15px', color: '#71767b' }}>
+                        Trenutno nema aktivnih trendova.
+                    </p>
+                )}
+
+                {/* Gumb prikazujemo samo ako ima više trendova u bazi nego što trenutno prikazujemo */}
+                {authStore.trends && authStore.trends.length > visibleTrendsCount && (
+                    <button className="show-more-link" onClick={handleShowMoreTrends}>
+                        Prikaži više
+                    </button>
+                )}
             </div>
 
             {/* KOGA PRATITI SEKCIJA */}
@@ -119,15 +143,5 @@ const RightPanel = observer(() => {
         </div>
     );
 });
-
-const TrendItem = ({ category, title, tweets }) => (
-    <div className="item-hover">
-        <div>
-            <p className="trend-category">{category}</p>
-            <p className="trend-title">{title}</p>
-            <p className="trend-stat">{tweets} posts</p>
-        </div>
-    </div>
-);
 
 export default RightPanel;

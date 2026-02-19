@@ -174,7 +174,26 @@ fetchSuggestions = async () => {
     } catch (err) {
         console.error("Greška pri dohvaćanju prijedloga", err);
     }
+    };
+
+    trends = []; 
+
+    fetchTrends = async () => {
+        if (!this.token) return;
+
+        try {
+            const res = await axios.get('http://localhost:3000/api/tweets/trends', {
+                headers: { Authorization: `Bearer ${this.token}` }
+            });
+            
+            runInAction(() => {
+                this.trends = res.data;
+            });
+        } catch (err) {
+            console.error("Greška pri dohvaćanju trendova u store-u:", err);
+        }
 };
 }
 
 export const authStore = new AuthStore();
+

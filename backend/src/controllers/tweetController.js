@@ -1,5 +1,5 @@
 import { Tweet, User, Comment, Notification, sequelize } from '../models/index.js';
-import { Op } from 'sequelize';
+import { Op, fn, col } from 'sequelize'
 
 export const getAllTweets = async (req, res) => {
     try {
@@ -178,3 +178,41 @@ export const deleteTweet = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+
+
+export const getTrends = async (req, res) => {
+    try {
+        const tenDaysAgo = new Date();
+        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+        const recentTweets = await Tweet.findAll({
+            where: {
+                createdAt: { [Op.gte]: tenDaysAgo }
+            },
+            attributes: ['content']
+        });
+
+        const hashtagCounts = {};
+        recentTweets.forEach(tweet => {
+            const hashtags = tweet.content.match(/#[a-z0-9_]+/gi);
+            if (hashtags) {
+                hashtags.forEach(tag => {
+                    const cleanTag = tag.toLowerCase();
+                    hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
+                });
+            }
+        });
+
+        // Pretvori u niz, sortiraj i uzmi top 5
+        const sortedTrends = Object.entries(hashtagCounts)
+            .map(([tag, count]) => ({ tag, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 20);
+
+        res.json(sortedTrends);
+    } catch (err) {
+        res.status(500).json({ error: "Greška pri dohvaćanju trendova" });
+    }
+}
+
