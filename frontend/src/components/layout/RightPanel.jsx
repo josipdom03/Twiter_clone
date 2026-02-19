@@ -6,9 +6,10 @@ import '../../styles/rightPanel.css';
 
 const RightPanel = observer(() => {
     const navigate = useNavigate();
-
-    // Lokalno stanje koje određuje koliko trendova trenutno prikazujemo
+    
+    // Stanja za limit prikaza
     const [visibleTrendsCount, setVisibleTrendsCount] = useState(5);
+    const [visibleUsersCount, setVisibleUsersCount] = useState(7); // Početno 7 korisnika
 
     useEffect(() => {
         if (authStore.token) {
@@ -16,16 +17,6 @@ const RightPanel = observer(() => {
             authStore.fetchTrends(); 
         }
     }, []);
-
-    const handleFollow = async (e, userId) => {
-        e.stopPropagation();
-        try {
-            await authStore.followUser(userId);
-            authStore.fetchSuggestions();
-        } catch (err) {
-            console.error("Greška pri praćenju:", err);
-        }
-    };
 
     const handleUserClick = (username) => {
         navigate(`/profile/${username}`);
@@ -35,13 +26,18 @@ const RightPanel = observer(() => {
         navigate(`/search?q=${encodeURIComponent(tag)}`);
     };
 
-    // Funkcija za povećanje limita prikaza za 5
     const handleShowMoreTrends = () => {
         setVisibleTrendsCount((prev) => prev + 5);
     };
 
-    // Uzimamo samo onoliko trendova koliko dopušta visibleTrendsCount
+    // Funkcija za povećanje broja vidljivih korisnika
+    const handleShowMoreUsers = () => {
+        setVisibleUsersCount((prev) => prev + 7);
+    };
+
+    // Filtriranje podataka za prikaz
     const displayedTrends = authStore.trends ? authStore.trends.slice(0, visibleTrendsCount) : [];
+    const displayedUsers = authStore.suggestions ? authStore.suggestions.slice(0, visibleUsersCount) : [];
 
     return (
         <div className="right-panel-wrapper">
@@ -57,10 +53,9 @@ const RightPanel = observer(() => {
                 </div>
             </div>
 
-            {/* DINAMIČNI TRENDOVI */}
+            {/* TRENDOVI */}
             <div className="right-section-card">
                 <h2 className="section-title">Što se događa</h2>
-                
                 {displayedTrends.length > 0 ? (
                     displayedTrends.map((trend) => (
                         <div 
@@ -79,8 +74,6 @@ const RightPanel = observer(() => {
                         Trenutno nema aktivnih trendova.
                     </p>
                 )}
-
-                {/* Gumb prikazujemo samo ako ima više trendova u bazi nego što trenutno prikazujemo */}
                 {authStore.trends && authStore.trends.length > visibleTrendsCount && (
                     <button className="show-more-link" onClick={handleShowMoreTrends}>
                         Prikaži više
@@ -88,15 +81,16 @@ const RightPanel = observer(() => {
                 )}
             </div>
 
-            {/* KOGA PRATITI SEKCIJA */}
+            {/* KOGA PRATITI */}
             <div className="right-section-card">
                 <h2 className="section-title">Koga pratiti</h2>
-                {authStore.suggestions?.length > 0 ? (
-                    authStore.suggestions.map((user) => (
+                {displayedUsers.length > 0 ? (
+                    displayedUsers.map((user) => (
                         <div 
                             key={user.id} 
                             className="item-hover user-suggestion-item"
                             onClick={() => handleUserClick(user.username)}
+                            style={{ cursor: 'pointer' }}
                         >
                             <div className="flex-items">
                                 {user.avatar ? (
@@ -115,29 +109,24 @@ const RightPanel = observer(() => {
                                         {user.username ? user.username[0].toUpperCase() : '?'}
                                     </div>
                                 )}
-                                
                                 <div className="user-info">
-                                    <span className="user-name">
-                                        {user.displayName || user.username}
-                                    </span>
-                                    <span className="user-username">
-                                        @{user.username}
-                                    </span>
+                                    <span className="user-name">{user.displayName || user.username}</span>
+                                    <span className="user-username">@{user.username}</span>
                                 </div>
                             </div>
-                            
-                            <button 
-                                onClick={(e) => handleFollow(e, user.id)} 
-                                className="follow-btn"
-                            >
-                                Prati
-                            </button>
                         </div>
                     ))
                 ) : (
-                    <div className="empty-suggestions">
+                    <div className="empty-suggestions" style={{ padding: '15px', color: '#71767b' }}>
                         Nema prijedloga za pratiti.
                     </div>
+                )}
+
+                {/* GUMB PRIKAŽI VIŠE ZA KORISNIKE */}
+                {authStore.suggestions && authStore.suggestions.length > visibleUsersCount && (
+                    <button className="show-more-link" onClick={handleShowMoreUsers}>
+                        Prikaži više
+                    </button>
                 )}
             </div>
         </div>

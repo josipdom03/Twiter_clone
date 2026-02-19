@@ -43,7 +43,7 @@ export const getSuggestions = async (req, res) => {
                 [literal('mutualCount'), 'DESC'], 
                 [literal('RAND()'), 'ASC']
             ],
-            limit: 7
+            limit: 21
         });
 
         res.json(suggestions);

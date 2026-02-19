@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { authStore } from './stores/AuthStore';
@@ -21,10 +21,36 @@ import './index.css';
 
 const App = observer(() => {
   const { isAuthenticated, isLoading } = authStore;
+  
+  // Stanje za vidljivost gumba "Povratak na vrh"
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   useEffect(() => {
+    // Provjera autentifikacije pri učitavanju
     authStore.checkAuth();
+
+    // Logika za prikazivanje gumba na temelju skrolanja
+    const handleScroll = () => {
+      if (window.scrollY > 400) {
+        setShowScrollBtn(true);
+      } else {
+        setShowScrollBtn(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    // Cleanup event listenera
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Funkcija za glatko skrolanje na vrh
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
 
   if (isLoading && !authStore.user && authStore.token) {
     return (
@@ -38,6 +64,7 @@ const App = observer(() => {
   return (
     <div className="app-container">
       <div className="app-layout">
+        
         {/* LIJEVI STUPAC - Sidebar */}
         {isAuthenticated && (
           <div className="sidebar-column">
@@ -72,6 +99,18 @@ const App = observer(() => {
             </div>
           </div>
         )}
+
+        {/* PLUTAJUĆI GUMB - Prikazuje se samo ako je showScrollBtn true */}
+        {showScrollBtn && isAuthenticated && (
+          <button 
+            className="scroll-to-top-btn" 
+            onClick={scrollToTop} 
+            title="Vrati na vrh"
+          >
+            ↑
+          </button>
+        )}
+
       </div>
     </div>
   );
