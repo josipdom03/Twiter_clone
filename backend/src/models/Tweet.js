@@ -9,7 +9,12 @@ const Tweet = sequelize.define('Tweet', {
   image: {
     type: DataTypes.STRING,
     allowNull: true
-  }
+  },
+  images: {
+    type: DataTypes.JSON, // Čuva niz putanja do slika
+    allowNull: true,
+    defaultValue: null
+}
 }, {
   timestamps: true // Automatski dodaje createdAt i updatedAt (bitno za poredak objava)
 });

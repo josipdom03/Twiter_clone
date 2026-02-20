@@ -1,22 +1,25 @@
-/* GENERAL PAGE */
+/* =========================================
+   GENERAL PAGE LAYOUT
+   ========================================= */
+
 .search-page {
     display: flex;
     flex-direction: column;
     width: 100%;
-    background: #000;
+    background: #fafafa;
     color: #fff;
     min-height: 100vh;
     border-left: 1px solid #2f3336;
     border-right: 1px solid #2f3336;
 }
 
-/* HEADER */
+/* HEADER STICKY */
 .search-header-sticky {
     position: sticky;
     top: 0;
-    background: rgba(0,0,0,0.85);
+    background: #1d9bf0;
     backdrop-filter: blur(12px);
-    z-index: 10;
+    z-index: 100;
     border-bottom: 1px solid #2f3336;
 }
 
@@ -28,28 +31,46 @@
 }
 
 .back-btn {
-    background: none;
+    background: transparent;
     border: none;
-    color: #fff;
-    font-size: 22px;
+    color: #333aaa;
+    font-size: 20px;
     cursor: pointer;
-    padding: 5px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .back-btn:hover {
     background: rgba(255,255,255,0.1);
 }
 
-/* SEARCH INPUT */
-.search-input-wrapper-main {
+/* =========================================
+   SEARCH INPUT & DROPDOWN LOGIC
+   ========================================= */
+
+.search-input-container {
+    position: relative;
     flex: 1;
+}
+
+.search-input-wrapper-main {
     display: flex;
     align-items: center;
-    background: #202327;
+    background: #333aaa;
     border-radius: 9999px;
-    padding: 8px 12px;
+    padding: 8px 16px;
+    transition: background 0.2s, border 0.2s;
+    border: 1px solid transparent;
+    width: 100%;
+}
+
+.search-input-wrapper-main:focus-within {
+    background: #000;
+    border-color: #1d9bf0;
 }
 
 .search-input-wrapper-main input {
@@ -57,22 +78,134 @@
     background: transparent;
     border: none;
     outline: none;
-    color: #fff;
+    color: #af0f0f;
     font-size: 15px;
+    width: 100%;
+}
+
+.search-input-wrapper-main input::placeholder {
+    color: #71767b;
 }
 
 .search-icon {
-    margin-right: 8px;
-    opacity: 0.6;
+    margin-right: 12px;
+    color: #71767b;
+    font-size: 18px;
 }
 
-/* RESULTS LIST */
+.search-icon:focus-within {
+    color: #1d9bf0;
+}
+
+/* --- DROPDOWN --- */
+.search-suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: #000;
+    border-radius: 12px;
+    border: 1px solid #2f3336;
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
+    z-index: 1000;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid #2f3336;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* AVATAR U DROPDOWNU */
+.suggestion-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+}
+
+.suggestion-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.suggestion-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #1d9bf0;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* INFO U DROPDOWNU */
+.suggestion-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.suggestion-name {
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-handle {
+    color: #71767b;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Search link stavka */
+.suggestion-item.search-link {
+    color: #1d9bf0;
+    border-top: 1px solid #2f3336;
+    justify-content: flex-start;
+    font-size: 14px;
+}
+
+.suggestion-item.search-link:hover {
+    background: rgba(29, 155, 240, 0.1);
+}
+
+/* =========================================
+   RESULTS LIST
+   ========================================= */
+
 .search-results-list {
     display: flex;
     flex-direction: column;
 }
 
-/* USER ITEM */
 .search-user-item {
     display: flex;
     align-items: center;
@@ -84,163 +217,114 @@
 }
 
 .search-user-item:hover {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.03);
 }
 
-/* AVATAR */
 .avatar-container {
-    position: relative;
     width: 48px;
     height: 48px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
 }
 
-
-
 .avatar-img {
-    position: absolute;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
     object-fit: cover;
 }
 
-/* USER INFO */
-/* USER INFO */
-.search-user-info {
-    flex: 1;             /* Ovo gura gumb udesno jer info zauzima sav preostali prostor */
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #1d9bf0;
+    color: #fff;
     display: flex;
-    flex-direction: column;
-    min-width: 0;        /* OBAVEZNO dodaj ovo da layout ne pukne kod dugih imena */
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    border-radius: 50%;
 }
 
-/* FOLLOW BUTTON - Dodaj margin-left za svaki slučaj */
-.follow-btn {
-    margin-left: auto;   /* Dodatna sigurnost koja "lijepi" gumb uz desni rub */
-    padding: 6px 16px;
-    flex-shrink: 0;      /* Sprječava da se gumb stisne ako ima previše teksta u sredini */
-    border-radius: 9999px;
-    border: 1px solid #1d9bf0;
-    background: transparent;
-    color: #1d9bf0;
-    cursor: pointer;
-    font-weight: 600;
-    transition: 0.2s;
+.search-user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .search-user-name {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 15px;
+    color: #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .search-user-username {
-    font-size: 14px;
     color: #71767b;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-
+.follow-btn {
+    margin-left: auto;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    border: 1px solid #fff;
+    background: #1d9bf0;
+    color: #000;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    min-width: 80px;
+}
 
 .follow-btn:hover {
-    background: rgba(29,155,240,0.1);
+    background: #e6e6e6;
 }
 
 .follow-btn.following {
-    background: #fff;
-    color: #000;
-    border-color: #fff;
+    background: transparent;
+    color: #1d9bf0;
+    border-color: #536471;
 }
 
 .follow-btn.following:hover {
-    background: #e0245e;
-    border-color: #e0245e;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
 }
 
 /* EMPTY STATE */
 .search-empty-state {
-    padding: 40px;
+    padding: 40px 20px;
     text-align: center;
     color: #71767b;
+    font-size: 15px;
 }
 
-/* LOADING */
+/* LOADING SPINNER */
 .loading-spinner-container {
+    padding: 40px;
     display: flex;
     justify-content: center;
-    padding: 40px;
 }
 
 .loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #333;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #333;
     border-top-color: #1d9bf0;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-
-/* POST ITEM U REZULTATIMA */
-.search-post-item {
-    display: flex;
-    flex-direction: column;
-    padding: 12px 16px;
-    border-bottom: 1px solid #2f3336;
-    cursor: pointer;
-    transition: background 0.2s;
-    gap: 4px;
-}
-
-.search-post-item:hover {
-    background: rgba(255, 255, 255, 0.03);
-}
-
-/* Header objave (Avatar + Ime + Username) */
-.post-res-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.mini-avatar {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #333;
-}
-
-.post-res-header strong {
-    font-size: 14px;
-    color: #fff;
-    font-weight: 700;
-}
-
-.post-res-header span {
-    font-size: 14px;
-    color: #71767b;
-}
-
-/* Sadržaj objave */
-.post-res-content {
-    font-size: 15px;
-    color: #e7e9ea;
-    line-height: 1.4;
-    padding-left: 28px; /* Poravnanje da tekst počne ispod imena, a ne ispod avatara */
-    word-break: break-word;
-}
-
-/* HASHTAG LINKOVI */
-.hashtag-link {
-    color: #1d9bf0; /* X plava boja */
-    text-decoration: none;
-    cursor: pointer;
-    font-weight: 400;
-}
-
-.hashtag-link:hover {
-    text-decoration: underline;
+@keyframes spin { 
+    to { transform: rotate(360deg); } 
 }

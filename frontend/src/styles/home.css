@@ -568,3 +568,97 @@
         border-right: none;
     }
 }
+
+
+/* Za loading more indikator */
+.feed-placeholder.loading-more {
+  padding: 20px;
+  background: transparent;
+  border-top: 1px solid #2f3336;
+}
+
+.feed-placeholder.end-of-feed {
+  padding: 30px 20px;
+  color: #71767b;
+  font-size: 14px;
+  border-top: 1px solid #2f3336;
+  background: transparent;
+}
+
+/* Mali loading spinner */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #333;
+  border-top-color: #1d9bf0;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive za manje ekrane */
+@media (max-width: 600px) {
+  .feed-placeholder.end-of-feed {
+    padding: 20px;
+  }
+}
+
+/* Dodaj na kraj home.css fajla */
+
+.char-counter {
+  font-size: 12px;
+  color: #71767b;
+  text-align: right;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.char-counter.warning {
+  color: #ffd400;
+}
+
+.char-counter.danger {
+  color: #f4212e;
+}
+
+.tweet-box-main textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+
+.tweet-box-main textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tweet-post-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.image-upload-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.image-upload-btn.disabled:hover {
+  background: transparent;
+}
+
+/* Za mobilne uređaje */
+@media (max-width: 600px) {
+  .tweet-box-main textarea {
+    font-size: 16px;
+  }
+}

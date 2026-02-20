@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../stores/AuthStore';
@@ -6,12 +6,19 @@ import { userStore } from '../stores/UserStore.jsx';
 import { Tweet } from '../components/layout/Tweet.jsx'; 
 import TweetDetail from './TweetDetail'; 
 import axios from 'axios';
+import '../styles/search.css'; 
 
 const Search = observer(() => {
     const [results, setResults] = useState([]);
     const [resultType, setResultType] = useState('users'); 
     const [loading, setLoading] = useState(false);
     const [selectedTweet, setSelectedTweet] = useState(null); 
+    
+    // Za prijedloge
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const dropdownRef = useRef(null);
+
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -20,10 +27,60 @@ const Search = observer(() => {
 
     const API_BASE_URL = "http://localhost:3000";
 
-    const followingIds = useMemo(() => {
-        if (!userStore.profile?.Following) return new Set();
-        return new Set(userStore.profile.Following.map(u => u.id));
+    // Pratimo lokalno stanje follow statusa za brže ažuriranje
+    const [localFollowing, setLocalFollowing] = useState(new Set());
+
+    // Inicijaliziramo localFollowing iz userStore.profile
+    useEffect(() => {
+        if (userStore.profile?.Following) {
+            setLocalFollowing(new Set(userStore.profile.Following.map(u => u.id)));
+        }
     }, [userStore.profile?.Following]);
+
+    // Koristimo localFollowing umjesto direktno iz storea za brže ažuriranje
+    const followingIds = useMemo(() => {
+        return localFollowing;
+    }, [localFollowing]);
+
+    // Dohvaćanje prijedloga (Debounce)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (inputQuery.trim().length > 1 && inputQuery !== query) {
+                fetchSuggestions(inputQuery);
+            } else {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [inputQuery, query]);
+
+    // Zatvaranje dropdowna klikom izvan
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const fetchSuggestions = async (val) => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/users/search?query=${encodeURIComponent(val)}`, {
+                headers: { Authorization: `Bearer ${authStore.token}` }
+            });
+            
+            if (response.data.type === 'users') {
+                setSuggestions(response.data.data.slice(0, 5));
+                setShowSuggestions(true);
+            }
+        } catch (err) {
+            console.error("Greška kod prijedloga:", err);
+        }
+    };
 
     const fetchResults = async () => {
         if (!query) {
@@ -31,6 +88,8 @@ const Search = observer(() => {
             return;
         }
         setLoading(true);
+        setShowSuggestions(false);
+        
         try {
             const response = await axios.get(`${API_BASE_URL}/api/users/search?query=${encodeURIComponent(query)}`, {
                 headers: { Authorization: `Bearer ${authStore.token}` }
@@ -46,7 +105,6 @@ const Search = observer(() => {
                 }));
                 setResults(updatedResults || []);
             } else {
-                // Za objave osiguravamo da su LikedByUsers i Comments barem prazni nizovi ako nisu stigli
                 const formattedTweets = data.map(tweet => ({
                     ...tweet,
                     LikedByUsers: tweet.LikedByUsers || [],
@@ -68,7 +126,17 @@ const Search = observer(() => {
         }
         fetchResults();
         setInputQuery(query);
-    }, [query, followingIds]);
+    }, [query]);
+
+    // Poseban useEffect za osvježavanje resultsa kada se promijeni followingIds
+    useEffect(() => {
+        if (results.length > 0 && resultType === 'users') {
+            setResults(prev => prev.map(user => ({
+                ...user,
+                isFollowing: followingIds.has(user.id)
+            })));
+        }
+    }, [followingIds]);
 
     const handleOpenTweet = async (tweet) => {
         try {
@@ -97,22 +165,71 @@ const Search = observer(() => {
     const handleSearchSubmit = (e) => {
         if (e) e.preventDefault();
         if (inputQuery.trim()) {
+            setShowSuggestions(false);
             navigate(`/search?q=${encodeURIComponent(inputQuery.trim())}`);
         }
     };
 
     const handleFollowToggle = async (e, user) => {
         e.stopPropagation();
+        
+        // Optimistično ažuriranje - odmah mijenjamo stanje
+        const newFollowing = new Set(localFollowing);
+        const currentlyFollowing = followingIds.has(user.id);
+        
+        if (currentlyFollowing) {
+            newFollowing.delete(user.id);
+        } else {
+            newFollowing.add(user.id);
+        }
+        
+        // Lokalno ažuriramo stanje za instant UI promjenu
+        setLocalFollowing(newFollowing);
+        
+        // Također ažuriramo results odmah
+        setResults(prev => prev.map(u => {
+            if (u.id === user.id) {
+                return { ...u, isFollowing: !currentlyFollowing };
+            }
+            return u;
+        }));
+
         try {
-            const currentlyFollowing = followingIds.has(user.id);
+            // Pozivamo API
             if (currentlyFollowing) {
                 await userStore.handleUnfollow(user.id);
             } else {
                 await userStore.handleFollow(user.id);
             }
+            
+            // Nakon uspješnog API poziva, osvježavamo profil da bude u sync
+            await userStore.fetchProfile();
+            
         } catch (err) {
             console.error("Greška kod promjene praćenja:", err);
+            
+            // Vraćamo staro stanje ako je došlo do greške
+            const revertFollowing = new Set(localFollowing);
+            if (currentlyFollowing) {
+                revertFollowing.add(user.id);
+            } else {
+                revertFollowing.delete(user.id);
+            }
+            setLocalFollowing(revertFollowing);
+            
+            setResults(prev => prev.map(u => {
+                if (u.id === user.id) {
+                    return { ...u, isFollowing: currentlyFollowing };
+                }
+                return u;
+            }));
         }
+    };
+
+    const handleSuggestionClick = (user) => {
+        setInputQuery(user.username);
+        setShowSuggestions(false);
+        navigate(`/profile/${user.username}`);
     };
 
     return (
@@ -121,22 +238,70 @@ const Search = observer(() => {
                 <TweetDetail 
                     tweet={selectedTweet} 
                     onClose={() => setSelectedTweet(null)} 
-                    // Ako TweetDetail podržava update, možeš proslijediti i updateLikeInState
                 />
             )}
 
             <div className="search-header-sticky">
                 <div className="search-top-bar">
                     <button className="back-btn" onClick={() => navigate(-1)}>←</button>
-                    <form onSubmit={handleSearchSubmit} className="search-input-wrapper-main">
-                        <span className="search-icon">🔍</span>
-                        <input 
-                            type="text" 
-                            placeholder="Pretraži korisnike ili #hashtagove"
-                            value={inputQuery}
-                            onChange={(e) => setInputQuery(e.target.value)}
-                        />
-                    </form>
+                    <div className="search-input-container" ref={dropdownRef}>
+                        <form onSubmit={handleSearchSubmit} className="search-input-wrapper-main">
+                            <span className="search-icon">🔍</span>
+                            <input 
+                                type="text" 
+                                placeholder="Pretraži korisnike ili #hashtagove"
+                                value={inputQuery}
+                                onChange={(e) => setInputQuery(e.target.value)}
+                                onFocus={() => inputQuery.length > 1 && setShowSuggestions(true)}
+                            />
+                        </form>
+
+                        {/* DROPDOWN ZA PRIJEDLOGE */}
+                        {showSuggestions && suggestions.length > 0 && (
+                            <div className="search-suggestions-dropdown">
+                                {suggestions.map((user) => {
+                                    const isFollowing = followingIds.has(user.id);
+                                    return (
+                                        <div 
+                                            key={user.id} 
+                                            className="suggestion-item" 
+                                            onClick={() => handleSuggestionClick(user)}
+                                        >
+                                            <div className="suggestion-avatar">
+                                                {user.avatar ? (
+                                                    <img 
+                                                        src={user.avatar.startsWith('http') ? user.avatar : `${API_BASE_URL}/${user.avatar}`} 
+                                                        alt={user.username} 
+                                                    />
+                                                ) : (
+                                                    <div className="suggestion-placeholder">
+                                                        {user.username[0].toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="suggestion-info">
+                                                <span className="suggestion-name">
+                                                    {user.displayName || user.username}
+                                                </span>
+                                                <span className="suggestion-handle">
+                                                    @{user.username}
+                                                    {isFollowing && <span style={{ marginLeft: '8px', color: '#1d9bf0', fontSize: '12px' }}>• Pratim</span>}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                
+                                {/* Search link stavka */}
+                                <div 
+                                    className="suggestion-item search-link"
+                                    onClick={handleSearchSubmit}
+                                >
+                                    Traži "{inputQuery}"
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -150,18 +315,31 @@ const Search = observer(() => {
                         if (resultType === 'users') {
                             const isFollowing = followingIds.has(item.id);
                             return (
-                                <div key={item.id} className="search-user-item" onClick={() => navigate(`/profile/${item.username}`)}>
+                                <div 
+                                    key={item.id} 
+                                    className="search-user-item" 
+                                    onClick={() => navigate(`/profile/${item.username}`)}
+                                >
                                     <div className="avatar-container">
                                         {item.avatar ? (
                                             <img 
                                                 src={item.avatar.startsWith('http') ? item.avatar : `${API_BASE_URL}/${item.avatar}`} 
-                                                className="avatar-img" alt={item.username}
+                                                className="avatar-img" 
+                                                alt={item.username}
                                             />
-                                        ) : <div className="avatar-placeholder">{item.username ? item.username[0].toUpperCase() : "?"}</div>}
+                                        ) : (
+                                            <div className="avatar-placeholder">
+                                                {item.username ? item.username[0].toUpperCase() : "?"}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="search-user-info">
-                                        <span className="search-user-name">{item.displayName || item.username}</span>
-                                        <span className="search-user-username">@{item.username}</span>
+                                        <span className="search-user-name">
+                                            {item.displayName || item.username}
+                                        </span>
+                                        <span className="search-user-username">
+                                            @{item.username}
+                                        </span>
                                     </div>
                                     {authStore.user?.id !== item.id && (
                                         <button 

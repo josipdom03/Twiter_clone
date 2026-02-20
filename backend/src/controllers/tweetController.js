@@ -1,10 +1,21 @@
 import { Tweet, User, Comment, Notification, sequelize } from '../models/index.js';
-import { Op, fn, col } from 'sequelize'
+import { Op, fn, col } from 'sequelize';
 
 export const getAllTweets = async (req, res) => {
     try {
         const currentUserId = req.user ? req.user.id : 0;
+        
+        // Parametri za paginaciju
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
 
+        console.log(`Dohvaćam tweets - page: ${page}, limit: ${limit}, offset: ${offset}`);
+
+        // Prvo izbroji ukupno tweetova
+        const totalTweets = await Tweet.count();
+
+        // Dohvati samo jednu stranicu
         const tweets = await Tweet.findAll({
             include: [
                 {
@@ -15,7 +26,6 @@ export const getAllTweets = async (req, res) => {
                             sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                             'isFollowing'
                         ],
-                        // DODANO: Provjera je li zvonce uključeno
                         [
                             sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
                             'isNotifying'
@@ -33,9 +43,23 @@ export const getAllTweets = async (req, res) => {
                     attributes: ['id']
                 }
             ],
-            order: [['createdAt', 'DESC']]
+            order: [['createdAt', 'DESC']],
+            limit: limit,
+            offset: offset
         });
-        res.json(tweets);
+
+        const totalPages = Math.ceil(totalTweets / limit);
+
+        console.log(`Vraćam ${tweets.length} tweetova od ukupno ${totalTweets}, stranica ${page}/${totalPages}`);
+
+        // Vrati objekt s paginacijom
+        res.json({
+            tweets: tweets,
+            totalPages: totalPages,
+            currentPage: page,
+            totalTweets: totalTweets
+        });
+
     } catch (error) {
         console.error("SERVER ERROR (getAllTweets):", error);
         res.status(500).json({ message: error.message });
@@ -91,6 +115,7 @@ export const createTweet = async (req, res) => {
             Comments: []
         });
     } catch (error) {
+        console.error("SERVER ERROR (createTweet):", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -110,7 +135,6 @@ export const getTweetById = async (req, res) => {
                             sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                             'isFollowing'
                         ],
-                        // DODANO: I ovdje provjeravamo zvonce
                         [
                             sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
                             'isNotifying'
@@ -175,11 +199,10 @@ export const deleteTweet = async (req, res) => {
         await tweet.destroy();
         res.json({ message: "Tweet uspješno obrisan" });
     } catch (error) {
+        console.error("SERVER ERROR (deleteTweet):", error);
         res.status(500).json({ message: error.message });
     }
 };
-
-
 
 export const getTrends = async (req, res) => {
     try {
@@ -204,7 +227,7 @@ export const getTrends = async (req, res) => {
             }
         });
 
-        // Pretvori u niz, sortiraj i uzmi top 5
+        // Pretvori u niz, sortiraj i uzmi top 20
         const sortedTrends = Object.entries(hashtagCounts)
             .map(([tag, count]) => ({ tag, count }))
             .sort((a, b) => b.count - a.count)
@@ -212,7 +235,7 @@ export const getTrends = async (req, res) => {
 
         res.json(sortedTrends);
     } catch (err) {
+        console.error("SERVER ERROR (getTrends):", err);
         res.status(500).json({ error: "Greška pri dohvaćanju trendova" });
     }
-}
-
+};
