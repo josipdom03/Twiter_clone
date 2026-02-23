@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTweet, getAllTweets, getTweetById, getTrends, deleteTweet,getFollowingTweets } from '../controllers/tweetController.js';
+import { createTweet, getAllTweets, getTweetById, getTrends, deleteTweet,getFollowingTweets ,retweetTweet} from '../controllers/tweetController.js';
 import { authMiddleware, optionalAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -18,6 +18,8 @@ router.get('/trends', getTrends);
 
 // Putanja: GET /api/tweets/:id
 router.get('/:id', optionalAuth, getTweetById);
+
+router.post('/:id/retweet', authMiddleware, retweetTweet);
 
 // Putanja: DELETE /api/tweets/:id (ako ti treba)
 router.delete('/:id', authMiddleware, deleteTweet);

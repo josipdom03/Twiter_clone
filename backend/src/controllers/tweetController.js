@@ -1,65 +1,78 @@
 import { Tweet, User, Comment, Notification, sequelize } from '../models/index.js';
-import { Op, fn, col } from 'sequelize';
+import { Op } from 'sequelize';
+
+/**
+ * Pomoćna funkcija za uniformno dohvaćanje tweetova s asocijacijama.
+ */
+const tweetIncludeSchema = (currentUserId) => [
+    {
+        model: User,
+        attributes: [
+            'id', 'username', 'displayName', 'avatar',
+            [
+                sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
+                'isFollowing'
+            ],
+            [
+                sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
+                'isNotifying'
+            ]
+        ]
+    },
+    {
+        model: Tweet,
+        as: 'ParentTweet',
+        include: [
+            { 
+                model: User, 
+                attributes: ['id', 'username', 'displayName', 'avatar'] 
+            },
+            { 
+                model: Comment, 
+                attributes: ['id'] 
+            },
+            { 
+                model: User, 
+                as: 'LikedByUsers', 
+                attributes: ['id'],
+                through: { attributes: [] }
+            }
+        ]
+    },
+    {
+        model: User,
+        as: 'LikedByUsers',
+        attributes: ['id'],
+        through: { attributes: [] }
+    },
+    {
+        model: Comment,
+        attributes: ['id']
+    }
+];
 
 export const getAllTweets = async (req, res) => {
     try {
         const currentUserId = req.user ? req.user.id : 0;
-        
-        // Parametri za paginaciju
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
-        console.log(`Dohvaćam tweets - page: ${page}, limit: ${limit}, offset: ${offset}`);
-
-        // Prvo izbroji ukupno tweetova
         const totalTweets = await Tweet.count();
 
-        // Dohvati samo jednu stranicu
         const tweets = await Tweet.findAll({
-            include: [
-                {
-                    model: User,
-                    attributes: [
-                        'id', 'username', 'displayName', 'avatar',
-                        [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
-                            'isFollowing'
-                        ],
-                        [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
-                            'isNotifying'
-                        ]
-                    ]
-                },
-                {
-                    model: User,
-                    as: 'LikedByUsers',
-                    attributes: ['id'],
-                    through: { attributes: [] }
-                },
-                {
-                    model: Comment,
-                    attributes: ['id']
-                }
-            ],
+            include: tweetIncludeSchema(currentUserId),
             order: [['createdAt', 'DESC']],
             limit: limit,
             offset: offset
         });
 
-        const totalPages = Math.ceil(totalTweets / limit);
-
-        console.log(`Vraćam ${tweets.length} tweetova od ukupno ${totalTweets}, stranica ${page}/${totalPages}`);
-
-        // Vrati objekt s paginacijom
         res.json({
             tweets: tweets,
-            totalPages: totalPages,
+            totalPages: Math.ceil(totalTweets / limit),
             currentPage: page,
             totalTweets: totalTweets
         });
-
     } catch (error) {
         console.error("SERVER ERROR (getAllTweets):", error);
         res.status(500).json({ message: error.message });
@@ -77,15 +90,10 @@ export const createTweet = async (req, res) => {
             userId: authorId
         });
 
-        // --- OBAVIJESTI PRATITELJIMA ---
         try {
-            // Pronađi sve koji prate autora i imaju upaljeno zvonce (notify: true)
             const subscribers = await sequelize.query(
                 `SELECT follower_id FROM follows WHERE following_id = :authorId AND notify = true`,
-                {
-                    replacements: { authorId },
-                    type: sequelize.QueryTypes.SELECT
-                }
+                { replacements: { authorId }, type: sequelize.QueryTypes.SELECT }
             );
 
             if (subscribers.length > 0) {
@@ -96,24 +104,21 @@ export const createTweet = async (req, res) => {
                     tweetId: newTweet.id,
                     isRead: false
                 }));
-
                 await Notification.bulkCreate(notificationsData);
             }
         } catch (notifError) {
             console.error("Greška pri slanju obavijesti:", notifError);
-            // Ne bacamo 500 grešku ovdje jer je tweet već uspješno kreiran
         }
-        // ------------------------------
+
+        const fullTweet = await Tweet.findByPk(newTweet.id, {
+            include: tweetIncludeSchema(authorId)
+        });
 
         if (req.io) {
-            req.io.emit('new_tweet', newTweet);
+            req.io.emit('new_tweet', fullTweet);
         }
 
-        res.status(201).json({
-            ...newTweet.toJSON(),
-            LikedByUsers: [],
-            Comments: []
-        });
+        res.status(201).json(fullTweet);
     } catch (error) {
         console.error("SERVER ERROR (createTweet):", error);
         res.status(500).json({ message: error.message });
@@ -127,32 +132,8 @@ export const getTweetById = async (req, res) => {
 
         const tweet = await Tweet.findByPk(id, {
             include: [
-                {
-                    model: User,
-                    attributes: [
-                        'id', 'username', 'displayName', 'avatar',
-                        [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
-                            'isFollowing'
-                        ],
-                        [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\` AND notify = true)`),
-                            'isNotifying'
-                        ]
-                    ]
-                },
-                {
-                    model: User,
-                    as: 'LikedByUsers',
-                    attributes: [
-                        'id', 'username', 'displayName', 'avatar',
-                        [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`LikedByUsers\`.\`id\`)`),
-                            'isFollowing'
-                        ]
-                    ],
-                    through: { attributes: [] }
-                },
+                // Filtriramo bazični Comment jer ćemo ga niže definirati detaljnije
+                ...tweetIncludeSchema(currentUserId).filter(inc => inc.model !== Comment),
                 {
                     model: Comment,
                     include: [
@@ -161,6 +142,8 @@ export const getTweetById = async (req, res) => {
                             attributes: [
                                 'id', 'username', 'displayName', 'avatar',
                                 [
+                                    // POPRAVLJENO: Koristi se `User` umjesto `Comments->User` 
+                                    // jer `separate: true` pokreće izolirani upit
                                     sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                                     'isFollowing'
                                 ]
@@ -211,14 +194,15 @@ export const getTrends = async (req, res) => {
 
         const recentTweets = await Tweet.findAll({
             where: {
-                createdAt: { [Op.gte]: tenDaysAgo }
+                createdAt: { [Op.gte]: tenDaysAgo },
+                content: { [Op.ne]: null }
             },
             attributes: ['content']
         });
 
         const hashtagCounts = {};
         recentTweets.forEach(tweet => {
-            const hashtags = tweet.content.match(/#[a-z0-9_]+/gi);
+            const hashtags = tweet.content?.match(/#[a-z0-9_]+/gi);
             if (hashtags) {
                 hashtags.forEach(tag => {
                     const cleanTag = tag.toLowerCase();
@@ -227,7 +211,6 @@ export const getTrends = async (req, res) => {
             }
         });
 
-        // Pretvori u niz, sortiraj i uzmi top 20
         const sortedTrends = Object.entries(hashtagCounts)
             .map(([tag, count]) => ({ tag, count }))
             .sort((a, b) => b.count - a.count)
@@ -240,58 +223,25 @@ export const getTrends = async (req, res) => {
     }
 };
 
-
-// Nova metoda za "Pratim" feed
 export const getFollowingTweets = async (req, res) => {
     try {
-        const currentUserId = req.user.id; // Obavezno jer je ovo privatni feed
+        const currentUserId = req.user.id;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
-        // 1. Pronađi ID-ove ljudi koje korisnik prati
-        // Koristimo tvoj model Follows/User ovisno o asocijacijama
         const following = await sequelize.query(
             `SELECT following_id FROM follows WHERE follower_id = :currentUserId`,
-            {
-                replacements: { currentUserId },
-                type: sequelize.QueryTypes.SELECT
-            }
+            { replacements: { currentUserId }, type: sequelize.QueryTypes.SELECT }
         );
 
         const followingIds = following.map(f => f.following_id);
         
-        // Ako korisnik nikoga ne prati, vrati prazan niz (ili dodaj i njegov ID da vidi svoje)
-        if (followingIds.length === 0) {
-            return res.json({ tweets: [], totalPages: 0, currentPage: page });
-        }
-
-        // 2. Dohvati tweetove tih korisnika
         const { rows, count } = await Tweet.findAndCountAll({
             where: {
                 userId: { [Op.in]: [...followingIds, currentUserId] }
             },
-            include: [
-                {
-                    model: User,
-                    attributes: ['id', 'username', 'displayName', 'avatar',
-                        [
-                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${currentUserId} AND following_id = \`User\`.\`id\`)`),
-                            'isFollowing'
-                        ]
-                    ]
-                },
-                {
-                    model: User,
-                    as: 'LikedByUsers',
-                    attributes: ['id'],
-                    through: { attributes: [] }
-                },
-                {
-                    model: Comment,
-                    attributes: ['id']
-                }
-            ],
+            include: tweetIncludeSchema(currentUserId),
             order: [['createdAt', 'DESC']],
             limit,
             offset
@@ -303,9 +253,61 @@ export const getFollowingTweets = async (req, res) => {
             currentPage: page,
             totalTweets: count
         });
-
     } catch (error) {
         console.error("ERROR (getFollowingTweets):", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const retweetTweet = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const authorId = req.user.id;
+
+        const originalTweet = await Tweet.findByPk(id);
+        if (!originalTweet) {
+            return res.status(404).json({ message: "Originalna objava nije pronađena" });
+        }
+
+        const existingRetweet = await Tweet.findOne({
+            where: {
+                userId: authorId,
+                parentId: id
+            }
+        });
+
+        if (existingRetweet) {
+            await existingRetweet.destroy();
+            return res.json({ message: "Retweet uklonjen", action: "unretweet" });
+        }
+
+        const newRetweet = await Tweet.create({
+            content: null, 
+            userId: authorId,
+            parentId: id
+        });
+
+        if (originalTweet.userId !== authorId) {
+            await Notification.create({
+                type: 'retweet',
+                recipientId: originalTweet.userId,
+                senderId: authorId,
+                tweetId: id,
+                isRead: false
+            });
+        }
+
+        const fullRetweet = await Tweet.findByPk(newRetweet.id, {
+            include: tweetIncludeSchema(authorId)
+        });
+
+        if (req.io) {
+            req.io.emit('new_tweet', fullRetweet);
+        }
+
+        res.status(201).json(fullRetweet);
+    } catch (error) {
+        console.error("SERVER ERROR (retweetTweet):", error);
         res.status(500).json({ message: error.message });
     }
 };

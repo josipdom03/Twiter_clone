@@ -429,3 +429,127 @@
     cursor: pointer !important; /* Prisili kursor na pointer */
     padding: 5px; /* Povećaj zonu klika */
 }
+
+/* --- Gumb "Prati" u listi komentara (Tiny verzija) --- */
+.modal-follow-btn-tiny {
+    background-color: #0f1419;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.modal-follow-btn-tiny.following {
+    background-color: transparent;
+    color: #0f1419;
+    border: 1px solid #cfd9de;
+}
+
+.modal-follow-btn-tiny.following:hover {
+    background-color: rgba(244, 33, 46, 0.1);
+    color: #f4212e;
+    border-color: #f4212e;
+}
+
+/* --- Sekcija za unos komentara (Avatar + Input) --- */
+.comment-input-section {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+}
+
+.comment-avatar-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-input-controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.comment-input-controls textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 18px;
+    font-family: inherit;
+    resize: none;
+    padding: 8px 0;
+}
+
+/* --- Layout akcija unutar komentara --- */
+.comment-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    color: #536471;
+}
+
+.comment-action-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.comment-likes-count {
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.comment-likes-count:hover {
+    text-decoration: underline;
+}
+
+.comment-time {
+    font-size: 13px;
+    color: #536471;
+}
+
+/* --- Placeholderi i Hoveri --- */
+.no-comments-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: #536471;
+    font-size: 15px;
+}
+
+.login-prompt-inline {
+    background-color: #f7f9f9;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    color: #536471;
+    font-size: 14px;
+    margin: 10px 0;
+}
+
+/* --- Hashtag linkovi (unutar renderContent) --- */
+.hashtag-link:hover {
+    text-decoration: underline;
+}
+
+/* --- Poboljšanje skrolanja --- */
+.modal-scroll-area::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-scroll-area::-webkit-scrollbar-thumb {
+    background-color: #cfd9de;
+    border-radius: 10px;
+}
+
+.modal-image-container {
+    margin-top: 10px;
+    border: 1px solid #eff3f4;
+    border-radius: 16px;
+    overflow: hidden;
+}
