@@ -662,3 +662,87 @@
     font-size: 16px;
   }
 }
+
+
+/* --- Kontejner za tabove na vrhu feeda --- */
+.feed-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color); /* Koristi tvoju varijablu za boju obruba */
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 53px; /* Ovisno o visini tvog headera, prilagodi ako treba */
+    z-index: 10;
+}
+
+/* --- Pojedinačni tab (Za vas / Pratim) --- */
+.tab {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px 0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+    font-weight: 500;
+    color: #536471; /* Neutralna siva */
+}
+
+.tab:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* --- Stil za aktivni tab --- */
+.tab.active {
+    color: #0f1419; /* Crna/Tamna boja teksta */
+    font-weight: 700;
+}
+
+/* --- Plavi indikator ispod teksta aktivnog taba --- */
+.tab-indicator {
+    position: absolute;
+    bottom: 0;
+    height: 4px;
+    min-width: 56px;
+    background-color: #1d9bf0; /* Twitter plava */
+    border-radius: 9999px;
+    display: none;
+}
+
+.tab.active .tab-indicator {
+    display: block;
+}
+
+/* --- Prilagodba za tamni način rada (ako ga koristiš) --- */
+@media (prefers-color-scheme: dark) {
+    .feed-tabs {
+        background-color: rgba(0, 0, 0, 0.65);
+        border-bottom: 1px solid #2f3336;
+    }
+    .tab:hover {
+        background-color: rgba(255, 255, 255, 0.03);
+    }
+    .tab.active {
+        color: #eff3f4;
+    }
+    .tab {
+        color: #71767b;
+    }
+}
+
+/* --- Pomoćne klase za placeholder i animacije --- */
+.loading-more {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.end-of-feed {
+    padding: 40px 20px;
+    text-align: center;
+    color: #71767b;
+    font-size: 15px;
+}

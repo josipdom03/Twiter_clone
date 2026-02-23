@@ -24,6 +24,9 @@ const Home = observer(() => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
+
+  // NOVO: State za tabove (all = Za vas, following = Pratim)
+  const [activeTab, setActiveTab] = useState('all');
   
   const observerRef = useRef();
   const lastTweetRef = useRef();
@@ -31,7 +34,7 @@ const Home = observer(() => {
   const API_BASE_URL = "http://localhost:3000";
   const TWEETS_PER_PAGE = 10;
 
-  // Funkcija za dohvaćanje objava (s paginacijom)
+  // Funkcija za dohvaćanje objava (nadograđena za tabove)
   const fetchTweets = async (pageNum = 1, append = false) => {
     try {
       if (pageNum === 1) {
@@ -40,28 +43,29 @@ const Home = observer(() => {
         setLoadingMore(true);
       }
 
-      console.log(`Dohvaćam tweets - stranica: ${pageNum}, append: ${append}`);
+      console.log(`Dohvaćam tweets (${activeTab}) - stranica: ${pageNum}, append: ${append}`);
+      
+      // Odabir endpointa ovisno o tabu
+      const endpoint = activeTab === 'following' ? '/api/tweets/following' : '/api/tweets';
       
       const res = await axios.get(
-        `${API_BASE_URL}/api/tweets?page=${pageNum}&limit=${TWEETS_PER_PAGE}`
+        `${API_BASE_URL}${endpoint}?page=${pageNum}&limit=${TWEETS_PER_PAGE}`,
+        {
+          headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+        }
       );
 
       console.log("Odgovor od servera:", res.data);
 
-      // Provjeri strukturu odgovora
       let newTweets = [];
       let total = 1;
 
       if (Array.isArray(res.data)) {
-        // Ako server vraća direktno niz
         newTweets = res.data;
-        total = 1; // Ako nema paginacije, onda je samo jedna stranica
-        console.log("Server je vratio niz tweets:", newTweets.length);
+        total = 1;
       } else if (res.data.tweets) {
-        // Ako server vraća { tweets: [], totalPages: x }
         newTweets = res.data.tweets;
         total = res.data.totalPages || 1;
-        console.log("Server je vratio objekt s tweets poljem:", newTweets.length);
       } else {
         console.warn("Nepoznat format odgovora:", res.data);
       }
@@ -70,35 +74,25 @@ const Home = observer(() => {
       setHasMore(pageNum < total);
 
       if (append) {
-        // Ako je "učitaj još", dodaj na postojeće
-        setTweets(prev => {
-          const combined = [...prev, ...newTweets];
-          console.log("Nakon append-a, ukupno tweets:", combined.length);
-          return combined;
-        });
+        setTweets(prev => [...prev, ...newTweets]);
       } else {
-        // Ako je prva stranica ili refresh, zamijeni
         setTweets(newTweets);
-        console.log("Postavljam nove tweets:", newTweets.length);
       }
 
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error("Ne mogu dohvatiti objave:", err);
-      if (err.response) {
-        console.error("Status greške:", err.response.status);
-        console.error("Poruka greške:", err.response.data);
-      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   };
 
-  // Inicijalno učitavanje
+  // Inicijalno učitavanje i promjena taba
   useEffect(() => {
-    fetchTweets(1, false);
     setPage(1);
-  }, []);
+    fetchTweets(1, false);
+  }, [activeTab]);
 
   // Intersection Observer za infinite scroll
   const lastTweetCallback = useCallback((node) => {
@@ -107,16 +101,15 @@ const Home = observer(() => {
 
     observerRef.current = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting && hasMore && !loadingMore) {
-        // Ako je zadnji tweet vidljiv i ima još stranica, učitaj sljedeću
         const nextPage = page + 1;
-        console.log("Zadnji tweet vidljiv, učitavam stranicu:", nextPage);
+        console.log("Učitavam sljedeću stranicu:", nextPage);
         setPage(nextPage);
         fetchTweets(nextPage, true);
       }
     });
 
     if (node) observerRef.current.observe(node);
-  }, [loadingMore, hasMore, page]);
+  }, [loadingMore, hasMore, page, activeTab]);
 
   const handleOpenTweet = async (tweet) => {
     try {
@@ -133,14 +126,12 @@ const Home = observer(() => {
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files || []);
 
-    // 1) Limit broja slika
     if (files.length + imageFiles.length > MAX_IMAGES) {
       alert(`Maksimalno ${MAX_IMAGES} slike po objavi!`);
       e.target.value = '';
       return;
     }
 
-    // 2) Provjera formata
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     const invalidType = files.some(file => !allowedTypes.includes(file.type));
 
@@ -150,7 +141,6 @@ const Home = observer(() => {
       return;
     }
 
-    // 3) Provjera veličine pojedine slike
     const tooLarge = files.some(file => file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024);
     if (tooLarge) {
       alert(`Svaka slika mora biti manja od ${MAX_IMAGE_SIZE_MB}MB!`);
@@ -158,7 +148,6 @@ const Home = observer(() => {
       return;
     }
 
-    // 4) Provjera ukupne veličine svih slika
     const totalSize = [...imageFiles, ...files].reduce((acc, file) => acc + file.size, 0);
     if (totalSize > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
       alert(`Ukupna veličina svih slika ne smije prelaziti ${MAX_TOTAL_SIZE_MB}MB!`);
@@ -166,10 +155,8 @@ const Home = observer(() => {
       return;
     }
 
-    // Ako je sve OK — spremi slike
     setImageFiles(prev => [...prev, ...files]);
 
-    // Generiraj preview
     files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -212,34 +199,25 @@ const Home = observer(() => {
         }
       );
 
-      console.log("Tweet kreiran:", response.data);
-
-      // Dohvati kompletan tweet sa svim podacima
       const newTweetRes = await axios.get(`${API_BASE_URL}/api/tweets/${response.data.id}`, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       });
 
-      console.log("Dohvaćen kompletan tweet:", newTweetRes.data);
-
-      // Nova objava ide na vrh, resetiraj paginaciju
+      // Ako smo na "Following" tabu, a tweet nije od nekoga koga pratimo (nego naš),
+      // možda ga želimo vidjeti na vrhu, pa ga dodajemo u state.
       setTweets((prev) => [newTweetRes.data, ...(prev || [])]);
       setTweetContent('');
       setImageFiles([]);
       setImagePreviews([]);
       
-      // Resetiraj paginaciju (vrati na prvu stranicu)
       setPage(1);
       setHasMore(true);
       
-      // Osvježi ukupan broj stranica
+      // Osvježi prvu stranicu da dobijemo točan poredak sa servera
       fetchTweets(1, false);
 
     } catch (err) {
       console.error("Greška pri objavi:", err);
-      if (err.response) {
-        console.error("Status greške:", err.response.status);
-        console.error("Poruka greške:", err.response.data);
-      }
       alert("Došlo je do greške pri objavi. Pokušaj ponovo.");
     } finally {
       setPostingTweet(false);
@@ -261,18 +239,15 @@ const Home = observer(() => {
     }));
   };
 
-  // Funkcija za brisanje tweeta iz state-a
   const handleTweetDelete = (tweetId) => {
     setTweets(prev => (prev || []).filter(t => t?.id !== tweetId));
   };
 
-  // Funkcija za osvježavanje feeda (npr. nakon brisanja tweeta)
   const refreshFeed = () => {
     setPage(1);
     fetchTweets(1, false);
   };
 
-  // Funkcija za brojač znakova
   const getCharCounterClass = () => {
     const length = tweetContent?.length || 0;
     if (length >= 270) return 'danger';
@@ -294,6 +269,30 @@ const Home = observer(() => {
       <header className="home-header">
         <h2 className="header-title">Početna</h2>
       </header>
+
+      {/* NOVO: Navigacijski tabovi */}
+      <div className="feed-tabs">
+        <div 
+          className={`tab ${activeTab === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveTab('all')}
+        >
+          <span>Za vas</span>
+          <div className="tab-indicator"></div>
+        </div>
+        <div 
+          className={`tab ${activeTab === 'following' ? 'active' : ''}`}
+          onClick={() => {
+            if (!authStore.isAuthenticated) {
+              alert("Morate biti prijavljeni da biste vidjeli objave onih koje pratite.");
+              return;
+            }
+            setActiveTab('following');
+          }}
+        >
+          <span>Pratim</span>
+          <div className="tab-indicator"></div>
+        </div>
+      </div>
 
       {authStore.isAuthenticated && (
         <div className="tweet-box-container">
@@ -388,14 +387,17 @@ const Home = observer(() => {
           <div className="tweets-list">
             {!tweets || tweets.length === 0 ? (
               <div className="feed-placeholder">
-                <p>Još nema objava. Budi prvi koji će nešto objaviti!</p>
+                <p>
+                  {activeTab === 'following' 
+                    ? "Još ne pratiti nikoga ili nema novih objava." 
+                    : "Još nema objava. Budi prvi koji će nešto objaviti!"}
+                </p>
               </div>
             ) : (
               <>
                 {tweets.map((tweet, index) => {
                   if (!tweet) return null;
                   
-                  // Zadnji tweet u listi? Dodaj mu ref za observer
                   if (tweets.length === index + 1) {
                     return (
                       <div ref={lastTweetCallback} key={tweet.id}>
@@ -420,7 +422,6 @@ const Home = observer(() => {
                   }
                 })}
                 
-                {/* Loading indicator za dodatne objave */}
                 {loadingMore && (
                   <div className="feed-placeholder loading-more">
                     <div className="loading-spinner"></div>
@@ -428,7 +429,6 @@ const Home = observer(() => {
                   </div>
                 )}
                 
-                {/* Kraj feeda */}
                 {!hasMore && tweets.length > 0 && (
                   <div className="feed-placeholder end-of-feed">
                     <p>To je sve za sada 🎉</p>

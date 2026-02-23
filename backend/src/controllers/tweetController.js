@@ -239,3 +239,73 @@ export const getTrends = async (req, res) => {
         res.status(500).json({ error: "Greška pri dohvaćanju trendova" });
     }
 };
+
+
+// Nova metoda za "Pratim" feed
+export const getFollowingTweets = async (req, res) => {
+    try {
+        const currentUserId = req.user.id; // Obavezno jer je ovo privatni feed
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
+        // 1. Pronađi ID-ove ljudi koje korisnik prati
+        // Koristimo tvoj model Follows/User ovisno o asocijacijama
+        const following = await sequelize.query(
+            `SELECT following_id FROM follows WHERE follower_id = :currentUserId`,
+            {
+                replacements: { currentUserId },
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+
+        const followingIds = following.map(f => f.following_id);
+        
+        // Ako korisnik nikoga ne prati, vrati prazan niz (ili dodaj i njegov ID da vidi svoje)
+        if (followingIds.length === 0) {
+            return res.json({ tweets: [], totalPages: 0, currentPage: page });
+        }
+
+        // 2. Dohvati tweetove tih korisnika
+        const { rows, count } = await Tweet.findAndCountAll({
+            where: {
+                userId: { [Op.in]: [...followingIds, currentUserId] }
+            },
+            include: [
+                {
+                    model: User,
+                    attributes: ['id', 'username', 'displayName', 'avatar',
+                        [
+                            sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${currentUserId} AND following_id = \`User\`.\`id\`)`),
+                            'isFollowing'
+                        ]
+                    ]
+                },
+                {
+                    model: User,
+                    as: 'LikedByUsers',
+                    attributes: ['id'],
+                    through: { attributes: [] }
+                },
+                {
+                    model: Comment,
+                    attributes: ['id']
+                }
+            ],
+            order: [['createdAt', 'DESC']],
+            limit,
+            offset
+        });
+
+        res.json({
+            tweets: rows,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            totalTweets: count
+        });
+
+    } catch (error) {
+        console.error("ERROR (getFollowingTweets):", error);
+        res.status(500).json({ message: error.message });
+    }
+};

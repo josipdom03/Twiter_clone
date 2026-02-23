@@ -1,11 +1,14 @@
 import express from 'express';
-import { createTweet, getAllTweets, getTweetById, getTrends, deleteTweet } from '../controllers/tweetController.js';
+import { createTweet, getAllTweets, getTweetById, getTrends, deleteTweet,getFollowingTweets } from '../controllers/tweetController.js';
 import { authMiddleware, optionalAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Putanja: GET /api/tweets (sada s paginacijom)
 router.get('/', optionalAuth, getAllTweets);
+
+// Putanja: GET /api/tweets/following (samo za autentificirane korisnike)
+router.get('/following', authMiddleware, getFollowingTweets);
 
 // Putanja: POST /api/tweets (zaštićena ruta)
 router.post('/', authMiddleware, createTweet);
