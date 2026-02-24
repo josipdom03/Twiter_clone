@@ -5,18 +5,21 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cron from 'node-cron'; // 1. Uvoz cron-a
+import { Op } from 'sequelize'; // Potrebno za filtriranje tweetova
 
-// 1. Inicijalizacija baze mora biti prva
+// Inicijalizacija baze
 import { initializeDatabase } from './db-init.js';
-
-// VAŽNO: Maknut je 'import ./models/index.js' jer on uzrokuje preuranjenu sinkronizaciju!
+// Uvoz modela i funkcije za score (Pazi na putanju do tvog kontrolera)
+import { Tweet } from './models/index.js';
+import { updateTweetScore } from './controllers/tweetController.js';
 
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
 
-// --- 1. SOCKET.IO KONFIGURACIJA ---
+// --- SOCKET.IO KONFIGURACIJA ---
 const io = new Server(httpServer, {
   cors: {
     origin: "http://localhost:5173",
@@ -26,7 +29,7 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling']
 });
 
-// --- 2. SOCKET LOGIKA ---
+// --- SOCKET LOGIKA ---
 io.on('connection', (socket) => {
   console.log('Korisnik spojen:', socket.id);
 
@@ -66,7 +69,7 @@ const __dirname = path.dirname(__filename);
 
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// --- DINAMIČKI IMPORT RUTA (Nakon što je baza spremna, rute će raditi) ---
+// --- DINAMIČKI IMPORT RUTA ---
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import tweetRoutes from './routes/tweetRoutes.js';
@@ -91,17 +94,44 @@ app.get('/', (req, res) => {
   res.send('Twitter Clone API is running...');
 });
 
-// --- 3. START SERVERA ---
+// --- 3. START SERVERA & CRON JOBS ---
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
     console.log('--- Pokretanje inicijalizacije baze ---');
     
-    // Inicijaliziramo bazu (ovo unutar sebe učitava modele ispravnim redoslijedom)
     const dbReady = await initializeDatabase(false);
 
     if (dbReady) {
+      // --- CRON LOGIKA: Pokreće se svakih 30 minuta ---
+      // Formula: '*/30 * * * *' (svaka 30. minuta)
+      cron.schedule('*/30 * * * *', async () => {
+        console.log('⏳ Pokrećem automatsko osvježavanje score-a za trendove...');
+        try {
+          // Dohvaćamo samo tweetove stvorene u zadnjih 10 dana
+          // Nema smisla stalno osvježavati tweetove stare godinu dana
+          const activeTweets = await Tweet.findAll({
+            where: {
+              createdAt: {
+                [Op.gte]: new Date(new Date() - 10 * 24 * 60 * 60 * 1000)
+              }
+            },
+            attributes: ['id']
+          });
+
+          console.log(`📊 Ažuriram score za ${activeTweets.length} aktivnih tweetova.`);
+          
+          // Koristimo for-of petlju (ne forEach) zbog async/await-a
+          for (const tweet of activeTweets) {
+            await updateTweetScore(tweet.id);
+          }
+          console.log('✅ Score-ovi uspješno osvježeni.');
+        } catch (cronErr) {
+          console.error('❌ Greška unutar Cron Job-a:', cronErr);
+        }
+      });
+
       httpServer.listen(PORT, () => {
         console.log(`🚀 Server uspješno pokrenut na portu ${PORT}`);
       });

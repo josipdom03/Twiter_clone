@@ -2,6 +2,41 @@ import { Tweet, User, Comment, Notification, sequelize } from '../models/index.j
 import { Op } from 'sequelize';
 
 /**
+ * POMOĆNA FUNKCIJA: Izračunava i ažurira score za specifičan tweet.
+ * Formula: ((Likes * 2) + (Retweets * 3) + (Comments * 1)) / (Hours + 2)^1.8
+ */
+export const updateTweetScore = async (tweetId) => {
+    try {
+        const tweet = await Tweet.findByPk(tweetId, {
+            include: [
+                { model: User, as: 'LikedByUsers', attributes: ['id'] },
+                { model: Comment, attributes: ['id'] }
+            ]
+        });
+
+        if (!tweet) return;
+
+        const likes = tweet.LikedByUsers?.length || 0;
+        const comments = tweet.Comments?.length || 0;
+        
+        // Brojimo retvitove (tweetovi kojima je ovaj tweet parentId)
+        const retweetCount = await Tweet.count({ where: { parentId: tweetId } });
+
+        // Vremenski faktor (Gravity) - score opada kako vrijeme prolazi
+        const hoursSinceCreated = (Date.now() - new Date(tweet.createdAt).getTime()) / (1000 * 60 * 60);
+        const gravity = 1.8;
+
+        const baseScore = (likes * 2) + (retweetCount * 3) + (comments * 1);
+        const newScore = baseScore / Math.pow(hoursSinceCreated + 2, gravity);
+
+        // Ažuriramo score u bazi bez okidanja hookova
+        await tweet.update({ score: newScore }, { hooks: false });
+    } catch (err) {
+        console.error("Greška pri ažuriranju score-a:", err);
+    }
+};
+
+/**
  * Pomoćna funkcija za uniformno dohvaćanje tweetova s asocijacijama.
  */
 const tweetIncludeSchema = (currentUserId) => [
@@ -62,7 +97,11 @@ export const getAllTweets = async (req, res) => {
 
         const tweets = await Tweet.findAll({
             include: tweetIncludeSchema(currentUserId),
-            order: [['createdAt', 'DESC']],
+            // Sortiranje po popularnosti (score), a zatim po datumu
+            order: [
+                ['score', 'DESC'],
+                ['createdAt', 'DESC']
+            ],
             limit: limit,
             offset: offset
         });
@@ -87,7 +126,8 @@ export const createTweet = async (req, res) => {
         const newTweet = await Tweet.create({
             content,
             image,
-            userId: authorId
+            userId: authorId,
+            score: 0 // Početni score za novu objavu
         });
 
         try {
@@ -130,9 +170,11 @@ export const getTweetById = async (req, res) => {
         const { id } = req.params;
         const currentUserId = req.user ? req.user.id : 0;
 
+        // Osvježavamo score pri pregledu tweeta kako bi osigurali ažurnost
+        await updateTweetScore(id);
+
         const tweet = await Tweet.findByPk(id, {
             include: [
-                // Filtriramo bazični Comment jer ćemo ga niže definirati detaljnije
                 ...tweetIncludeSchema(currentUserId).filter(inc => inc.model !== Comment),
                 {
                     model: Comment,
@@ -142,8 +184,6 @@ export const getTweetById = async (req, res) => {
                             attributes: [
                                 'id', 'username', 'displayName', 'avatar',
                                 [
-                                    // POPRAVLJENO: Koristi se `User` umjesto `Comments->User` 
-                                    // jer `separate: true` pokreće izolirani upit
                                     sequelize.literal(`EXISTS(SELECT 1 FROM follows WHERE follower_id = ${Number(currentUserId)} AND following_id = \`User\`.\`id\`)`),
                                     'isFollowing'
                                 ]
@@ -278,6 +318,8 @@ export const retweetTweet = async (req, res) => {
 
         if (existingRetweet) {
             await existingRetweet.destroy();
+            // Ažuriramo score originala nakon što je retweet uklonjen
+            await updateTweetScore(id);
             return res.json({ message: "Retweet uklonjen", action: "unretweet" });
         }
 
@@ -286,6 +328,9 @@ export const retweetTweet = async (req, res) => {
             userId: authorId,
             parentId: id
         });
+
+        // Ažuriramo score originala jer je dobio novi retweet
+        await updateTweetScore(id);
 
         if (originalTweet.userId !== authorId) {
             await Notification.create({

@@ -1,4 +1,7 @@
 import { Tweet, Comment, User, Notification } from '../models/index.js';
+// Pretpostavljam da je tvoj tweet kontroler u istoj mapi. 
+// Obavezno dodaj "export" ispred "const updateTweetScore" u tweetController.js
+import { updateTweetScore } from './tweetController.js'; 
 
 // Toggle lajk za Tweet
 export const toggleTweetLike = async (req, res) => {
@@ -13,9 +16,16 @@ export const toggleTweetLike = async (req, res) => {
         
         if (hasLiked) {
             await tweet.removeLikedByUsers(userId);
+            
+            // NADOGRADNJA: Ažuriraj score nakon micanja lajka
+            await updateTweetScore(id);
+
             return res.json({ liked: false });
         } else {
             await tweet.addLikedByUsers(userId);
+
+            // NADOGRADNJA: Ažuriraj score nakon dodavanja lajka
+            await updateTweetScore(id);
 
             if (tweet.userId !== userId) {
                 const [notification, created] = await Notification.findOrCreate({
@@ -58,9 +68,21 @@ export const toggleCommentLike = async (req, res) => {
         
         if (hasLiked) {
             await comment.removeLikedByUsers(userId);
+            
+            // NADOGRADNJA: Ako komentar utječe na score parent tweeta (prema tvojoj formuli u updateTweetScore),
+            // ažuriramo score tweeta kojem komentar pripada.
+            if (comment.tweetId) {
+                await updateTweetScore(comment.tweetId);
+            }
+
             return res.json({ liked: false });
         } else {
             await comment.addLikedByUsers(userId);
+
+            // NADOGRADNJA: Ažuriranje score-a tweeta zbog nove interakcije na komentaru
+            if (comment.tweetId) {
+                await updateTweetScore(comment.tweetId);
+            }
 
             if (comment.userId !== userId) {
                 const [notification, created] = await Notification.findOrCreate({

@@ -1,4 +1,6 @@
 import { Comment, User, Follow } from '../models/index.js';
+// Uvozi updateTweetScore iz tweetController-a
+import { updateTweetScore } from './tweetController.js';
 
 export const createComment = async (req, res) => {
   try {
@@ -11,8 +13,13 @@ export const createComment = async (req, res) => {
       userId
     });
 
+    // NADOGRADNJA: Ažuriraj score tweeta jer je dobio novi komentar
+    if (tweetId) {
+      await updateTweetScore(tweetId);
+    }
+
     const commentWithUser = await Comment.findByPk(newComment.id, {
-      include: [{ model: User, attributes: ['username', 'displayName', 'avatar'] }]
+      include: [{ model: User, attributes: ['id', 'username', 'displayName', 'avatar'] }]
     });
 
     res.status(201).json(commentWithUser);
@@ -24,7 +31,6 @@ export const createComment = async (req, res) => {
 export const getCommentLikes = async (req, res) => {
     try {
         const { id } = req.params;
-        // req.user dolazi iz optionalAuth ili authMiddleware
         const currentUserId = req.user ? req.user.id : null;
 
         const comment = await Comment.findByPk(id, {
@@ -40,13 +46,11 @@ export const getCommentLikes = async (req, res) => {
             return res.status(404).json({ message: "Komentar nije pronađen" });
         }
 
-        // Ako nema lajkova, odmah vrati prazan niz da izbjegnemo mapiranje
         const likedByUsers = comment.LikedByUsers || [];
 
         const likes = await Promise.all(likedByUsers.map(async (user) => {
             let isFollowing = false;
             
-            // Provjera praćenja samo ako je korisnik logiran i ne gleda sebe
             if (currentUserId && currentUserId !== user.id) {
                 const follow = await Follow.findOne({
                     where: { 
@@ -57,7 +61,6 @@ export const getCommentLikes = async (req, res) => {
                 isFollowing = !!follow;
             }
             
-            // Koristimo .get({ plain: true }) da dobijemo čisti objekt bez Sequelize metapodataka
             return { 
                 ...user.get({ plain: true }), 
                 isFollowing 
@@ -66,7 +69,6 @@ export const getCommentLikes = async (req, res) => {
 
         res.json(likes);
     } catch (error) {
-        // Logiranje stvarne greške u terminalu radi lakšeg debugiranja
         console.error("Greška u getCommentLikes:", error);
         res.status(500).json({ error: error.message });
     }
