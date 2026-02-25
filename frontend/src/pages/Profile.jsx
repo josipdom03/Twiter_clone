@@ -231,14 +231,30 @@ const Profile = observer(() => {
                     <h3 className="section-title">Objave</h3>
                     {canSeeContent ? (
                         <div className="tweets-list">
-                            {p.Tweets?.length > 0 ? p.Tweets.map(t => (
-                                <Tweet 
-                                    key={t.id} 
-                                    tweet={{...t, User: p}} 
-                                    onOpen={setSelectedTweet} 
-                                    onLikeUpdate={() => isMyProfile ? userStore.fetchProfile() : userStore.fetchPublicProfile(username)} 
-                                />
-                            )) : <p className="no-tweets">Korisnik još nema objava.</p>}
+                            {p.Tweets?.length > 0 ? (
+                                p.Tweets.map((t) => (
+                                    <Tweet
+                                        key={t.id}
+                                        // Šaljemo tweet i "ubrizgavamo" User podatke iz objekta p
+                                        // kako bi Tweet komponenta mogla prikazati ime i avatar
+                                        tweet={{
+                                            ...t,
+                                            User: {
+                                                id: p.id,
+                                                username: p.username,
+                                                displayName: p.displayName,
+                                                avatar: p.avatar
+                                            }
+                                        }}
+                                        onOpen={setSelectedTweet}
+                                        // Ažuriramo profil nakon lajka ili retweeta
+                                        onLikeUpdate={() => isMyProfile ? userStore.fetchProfile() : userStore.fetchPublicProfile(username)}
+                                        onRetweetUpdate={() => isMyProfile ? userStore.fetchProfile() : userStore.fetchPublicProfile(username)}
+                                    />
+                                ))
+                            ) : (
+                                <p className="no-tweets">Korisnik još nema objava.</p>
+                            )}
                         </div>
                     ) : (
                         <div className="private-account-message">

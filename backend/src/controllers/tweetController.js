@@ -131,16 +131,15 @@ export const getAllTweets = async (req, res) => {
 };
 
 export const createTweet = async (req, res) => {
+    // Definiramo varijablu izvan try bloka da izbjegnemo ReferenceError
+    let newTweet; 
+
     try {
-        // Multer popunjava req.body i req.files
         const { content } = req.body;
         const authorId = req.user.id;
 
         console.log("--- NOVI TWEET ZAHTJEV ---");
-        console.log("Tekst (req.body.content):", content);
-        console.log("Datoteke (req.files):", req.files);
-
-        // Mapiranje putanja slika
+        
         let imagePaths = [];
         if (req.files && req.files.length > 0) {
             imagePaths = req.files.map(file => `/uploads/${file.filename}`);
@@ -153,19 +152,30 @@ export const createTweet = async (req, res) => {
 
         if (match) {
             const url = match[0];
-            const metadata = await getLinkPreview(url);
-            if (metadata) {
-                previewData = {
-                    linkUrl: url,
-                    linkTitle: metadata.title,
-                    linkDescription: metadata.description,
-                    linkImage: metadata.image
-                };
+            try {
+                // POPRAVAK ZA 403: Dodajemo User-Agent zaglavlje
+                const metadata = await getLinkPreview(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+                    }
+                });
+                
+                if (metadata) {
+                    previewData = {
+                        linkUrl: url,
+                        linkTitle: metadata.title || null,
+                        linkDescription: metadata.description || null,
+                        linkImage: metadata.image || null
+                    };
+                }
+            } catch (previewError) {
+                console.error("Link preview error (ignorirano):", previewError.message);
+                // Nastavljamo dalje, tweet je važniji od previewa
             }
         }
 
-        // Slanje u bazu - image se sprema kao JSON string polja putanja
-        const newTweet = await Tweet.create({
+        // Slanje u bazu
+        newTweet = await Tweet.create({
             content: content || "",
             image: imagePaths.length > 0 ? JSON.stringify(imagePaths) : null,
             userId: authorId,
@@ -175,7 +185,7 @@ export const createTweet = async (req, res) => {
 
         console.log("Tweet uspješno kreiran. ID:", newTweet.id);
 
-        // Slanje obavijesti pretplatnicima
+        // Slanje obavijesti pretplatnicima (samo ako je tweet kreiran)
         try {
             const subscribers = await sequelize.query(
                 `SELECT follower_id FROM follows WHERE following_id = :authorId AND notify = true`,
@@ -187,7 +197,7 @@ export const createTweet = async (req, res) => {
                     type: 'new_tweet',
                     recipientId: sub.follower_id,
                     senderId: authorId,
-                    tweetId: newTweet.id,
+                    tweetId: newTweet.id, // Ovdje više neće bacati ReferenceError
                     isRead: false
                 }));
                 await Notification.bulkCreate(notificationsData);
@@ -196,6 +206,7 @@ export const createTweet = async (req, res) => {
             console.error("Greška pri slanju obavijesti:", notifError);
         }
 
+        // Dohvaćanje punog tweeta za odgovor/socket
         const fullTweet = await Tweet.findByPk(newTweet.id, {
             include: tweetIncludeSchema(authorId)
         });
@@ -204,10 +215,11 @@ export const createTweet = async (req, res) => {
             req.io.emit('new_tweet', fullTweet);
         }
 
-        res.status(201).json(fullTweet);
+        return res.status(201).json(fullTweet);
+
     } catch (error) {
         console.error("SERVER ERROR (createTweet):", error);
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
 
@@ -221,6 +233,8 @@ export const getTweetById = async (req, res) => {
         const tweet = await Tweet.findByPk(id, {
             include: [
                 ...tweetIncludeSchema(currentUserId).filter(inc => inc.model !== Comment),
+                
+                // KOMENTARI
                 {
                     model: Comment,
                     include: [
@@ -248,6 +262,9 @@ export const getTweetById = async (req, res) => {
         });
 
         if (!tweet) return res.status(404).json({ message: "Objava nije pronađena" });
+
+        // Pošto su linkUrl, linkTitle itd. u samom modelu Tweet, 
+        // oni će se automatski poslati u JSON-u.
         res.json(tweet);
     } catch (error) {
         console.error("SERVER ERROR (getTweetById):", error);

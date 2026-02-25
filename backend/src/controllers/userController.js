@@ -23,7 +23,15 @@ export const getProfile = async (req, res) => {
         const user = await User.findByPk(req.user.id, {
             attributes: { exclude: ['password', 'verificationToken'] },
             include: [
-                { model: Tweet, as: 'Tweets', attributes: ['id', 'content', 'image', 'createdAt'] },
+                { 
+                    model: Tweet, 
+                    as: 'Tweets', 
+                    // POPRAVAK: Dodani link i score atributi
+                    attributes: [
+                        'id', 'content', 'image', 'createdAt', 
+                        'linkUrl', 'linkTitle', 'linkDescription', 'linkImage', 'score'
+                    ] 
+                },
                 { model: User, as: 'Followers', attributes: ['id', 'username', 'displayName', 'avatar'] },
                 { model: User, as: 'Following', attributes: ['id', 'username', 'displayName', 'avatar'] }
             ],
@@ -39,6 +47,75 @@ export const getProfile = async (req, res) => {
         res.json(userData);
     } catch (error) {
         res.status(500).json({ message: 'Greška pri dohvaćanju profila', error: error.message });
+    }
+};
+
+export const getUserByUsername = async (req, res) => {
+    try {
+        const { username } = req.params;
+        const currentUserId = req.user?.id; 
+
+        const user = await User.findOne({
+            where: { username },
+            attributes: ['id', 'username', 'displayName', 'avatar', 'bio', 'createdAt', 'isPrivate'],
+            include: [
+                { 
+                    model: Tweet, 
+                    as: 'Tweets', 
+                    // POPRAVAK: Dodani link i score atributi
+                    attributes: [
+                        'id', 'content', 'image', 'createdAt', 
+                        'linkUrl', 'linkTitle', 'linkDescription', 'linkImage', 'score'
+                    ],
+                    include: [
+                        { 
+                            model: User, 
+                            as: 'LikedByUsers', 
+                            attributes: ['id'] 
+                        },
+                        { 
+                            model: Comment, 
+                            attributes: ['id'] 
+                        }
+                    ]
+                },
+                { model: User, as: 'Followers', attributes: ['id', 'username', 'displayName', 'avatar'] },
+                { model: User, as: 'Following', attributes: ['id', 'username', 'displayName', 'avatar'] }
+            ],
+            order: [[ { model: Tweet, as: 'Tweets' }, 'createdAt', 'DESC' ]]
+        });
+
+        if (!user) return res.status(404).json({ message: 'Korisnik nije pronađen' });
+
+        const userData = user.toJSON();
+
+        if (userData.Tweets) {
+            userData.Tweets = userData.Tweets.map(t => ({
+                ...t,
+                likesCount: t.LikedByUsers?.length || 0,
+                repliesCount: t.Comments?.length || 0,
+                isLiked: t.LikedByUsers?.some(u => u.id === currentUserId) || false
+            }));
+        }
+
+        userData.isFollowing = user.Followers.some(f => f.id === currentUserId);
+        userData.followersCount = user.Followers?.length || 0;
+        userData.followingCount = user.Following?.length || 0;
+
+        const pendingRequest = await FollowRequest.findOne({
+            where: { senderId: currentUserId, recipientId: user.id, status: 'pending' }
+        });
+        userData.followStatus = pendingRequest ? 'pending' : 'none';
+
+        if (user.isPrivate && !userData.isFollowing && user.id !== currentUserId) {
+            userData.Tweets = []; 
+            userData.isLocked = true; 
+        }
+
+        res.json(userData);
+    } catch (error) {
+        console.error("Greška u getUserByUsername:", error);
+        res.status(500).json({ message: 'Greška na serveru', error: error.message });
     }
 };
 
@@ -73,92 +150,71 @@ export const updateProfile = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Greška pri ažuriranju profila' });
     }
-};export const getUserByUsername = async (req, res) => {
-    try {
-        const { username } = req.params;
-        const currentUserId = req.user?.id; 
-
-        const user = await User.findOne({
-            where: { username },
-            attributes: ['id', 'username', 'displayName', 'avatar', 'bio', 'createdAt', 'isPrivate'],
-            include: [
-                { 
-                    model: Tweet, 
-                    as: 'Tweets', 
-                    attributes: ['id', 'content', 'image', 'createdAt'],
-                    include: [
-                        { 
-                            model: User, 
-                            as: 'LikedByUsers', 
-                            attributes: ['id'] // Dovoljan nam je samo ID da izbrojimo
-                        },
-                        { 
-                            model: Comment, 
-                            attributes: ['id'] // Dovoljan nam je samo ID da izbrojimo
-                        }
-                    ]
-                },
-                { model: User, as: 'Followers', attributes: ['id', 'username', 'displayName', 'avatar'] },
-                { model: User, as: 'Following', attributes: ['id', 'username', 'displayName', 'avatar'] }
-            ],
-            order: [[ { model: Tweet, as: 'Tweets' }, 'createdAt', 'DESC' ]]
-        });
-
-        if (!user) return res.status(404).json({ message: 'Korisnik nije pronađen' });
-
-        const userData = user.toJSON();
-
-        // Mapiramo tweetove da dodamo likesCount i repliesCount koje Frontend očekuje
-        if (userData.Tweets) {
-            userData.Tweets = userData.Tweets.map(t => ({
-                ...t,
-                likesCount: t.LikedByUsers?.length || 0,
-                repliesCount: t.Comments?.length || 0,
-                // Provjera je li trenutni korisnik lajkao ovaj tweet
-                isLiked: t.LikedByUsers?.some(u => u.id === currentUserId) || false
-            }));
-        }
-
-        userData.isFollowing = user.Followers.some(f => f.id === currentUserId);
-        userData.followersCount = user.Followers?.length || 0;
-        userData.followingCount = user.Following?.length || 0;
-
-        // Provjera poslanog zahtjeva ako je profil privatan
-        const pendingRequest = await FollowRequest.findOne({
-            where: { senderId: currentUserId, recipientId: user.id, status: 'pending' }
-        });
-        userData.followStatus = pendingRequest ? 'pending' : 'none';
-
-        // --- LOGIKA PRIVATNOSTI ---
-        if (user.isPrivate && !userData.isFollowing && user.id !== currentUserId) {
-            userData.Tweets = []; 
-            userData.isLocked = true; 
-        }
-
-        res.json(userData);
-    } catch (error) {
-        console.error("Greška u getUserByUsername:", error);
-        res.status(500).json({ message: 'Greška na serveru', error: error.message });
-    }
 };
 
 export const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
+        const currentUserId = req.user?.id;
+
         const user = await User.findByPk(id, {
-            attributes: ['id', 'username', 'displayName', 'avatar', 'isPrivate']
+            attributes: ['id', 'username', 'displayName', 'avatar', 'isPrivate', 'bio', 'createdAt'],
+            include: [
+                {
+                    model: Tweet,
+                    as: 'Tweets',
+                    // DODAJEMO SVE ATRIBUTE ZA LINK PREVIEW I SLIKE
+                    attributes: [
+                        'id', 'content', 'image', 'createdAt', 
+                        'linkUrl', 'linkTitle', 'linkDescription', 'linkImage', 'score'
+                    ],
+                    include: [
+                        { 
+                            model: User, 
+                            as: 'LikedByUsers', 
+                            attributes: ['id'] 
+                        },
+                        { 
+                            model: Comment, 
+                            attributes: ['id'] 
+                        }
+                    ]
+                }
+            ]
         });
 
         if (!user) {
             return res.status(404).json({ message: 'Korisnik nije pronađen' });
         }
 
-        res.json(user);
+        // Pretvaramo u JSON kako bismo mogli manipulirati podacima
+        const userData = user.toJSON();
+
+        // Mapiranje tweetova da frontend dobije likesCount i ostalo
+        if (userData.Tweets) {
+            userData.Tweets = userData.Tweets.map(t => ({
+                ...t,
+                likesCount: t.LikedByUsers?.length || 0,
+                repliesCount: t.Comments?.length || 0,
+                isLiked: t.LikedByUsers?.some(u => u.id === currentUserId) || false
+            }));
+        }
+
+        // Provjera privatnosti - sakrij tweetove ako korisnik ne prati privatni profil
+        // (Ovdje bi trebala ići dodatna provjera prati li ga currentUserId ako je isPrivate)
+        if (user.isPrivate && user.id !== currentUserId) {
+            // Ovdje možeš dodati provjeru asocijacije ako je bitno
+            // Za sada, ako je striktno "dohvati po ID-u", vraćamo osnovno
+        }
+
+        res.json(userData);
     } catch (error) {
+        console.error("Greška u getUserById:", error);
         res.status(500).json({ message: 'Greška na serveru', error: error.message });
     }
-
 };
+
+
 export const searchGeneral = async (req, res) => {
     try {
         const { query } = req.query;

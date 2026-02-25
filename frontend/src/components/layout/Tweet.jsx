@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { authStore } from '../../stores/AuthStore'; 
 import axios from 'axios';
+import '../../styles/tweet.css';
 
 export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate }) => {
     const navigate = useNavigate();
@@ -47,37 +48,23 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
         }
     };
 
-    // NADOGRAĐENO: Prepoznaje i hashtage i linkove
     const renderContent = (text) => {
         if (!text) return "";
         const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+|https?:\/\/[^\s]+)/g);
         return parts.map((part, index) => {
             if (part.startsWith("#")) {
                 return (
-                    <span 
-                        key={index} 
-                        className="hashtag-link" 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/search?q=${encodeURIComponent(part)}`);
-                        }}
-                        style={{ color: '#1d9bf0', cursor: 'pointer' }}
-                    >
+                    <span key={index} className="hashtag-link" 
+                        onClick={(e) => { e.stopPropagation(); navigate(`/search?q=${encodeURIComponent(part)}`); }}>
                         {part}
                     </span>
                 );
             }
-            // Dodano: Detekcija URL-a u tekstu
             if (part.match(/^https?:\/\//)) {
+                if (displayData.linkUrl && part.trim() === displayData.linkUrl.trim()) return null;
                 return (
-                    <a 
-                        key={index} 
-                        href={part} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ color: '#1d9bf0', textDecoration: 'none' }}
-                    >
+                    <a key={index} href={part} target="_blank" rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()} className="content-link">
                         {part}
                     </a>
                 );
@@ -86,19 +73,23 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
         });
     };
 
+    const formatHostname = (url) => {
+        try { return new URL(url).hostname.replace('www.', ''); } 
+        catch (e) { return ''; }
+    };
+
     if (!displayData) return <div className="tweet-item">Učitavanje...</div>;
 
     return (
-        <div className="tweet-item" onClick={() => onOpen(displayData)} style={{ cursor: 'pointer' }}>
-            
+        <div className="tweet-item" onClick={() => onOpen(displayData)}>
             {isRetweetAction && (
-                <div className="retweet-upper-label" style={{ paddingLeft: '48px', color: '#536471', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' }}>
+                <div className="retweet-upper-label">
                     <span className="rt-icon">🔁</span> 
                     {retweeter?.displayName || (retweeter?.username ? `@${retweeter.username}` : 'Netko')} je proslijedio/la
                 </div>
             )}
 
-            <div className="tweet-main-content" style={{ display: 'flex' }}>
+            <div className="tweet-main-content">
                 <div className="tweet-avatar-placeholder" onClick={(e) => e.stopPropagation()}>
                     <Link to={`/profile/${displayData.User?.username}`}>
                         <img 
@@ -109,94 +100,55 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
                     </Link>
                 </div>
                 
-                <div className="tweet-body" style={{ width: '100%' }}>
+                <div className="tweet-body">
                     <div className="tweet-header-info">
-                        <Link 
-                            to={`/profile/${displayData.User?.username}`} 
-                            className="tweet-user-link" 
-                            onClick={(e) => e.stopPropagation()}
-                        >
+                        <Link to={`/profile/${displayData.User?.username}`} className="tweet-user-link" onClick={(e) => e.stopPropagation()}>
                             <span className="tweet-display-name">{displayData.User?.displayName || 'Korisnik'}</span>
                             <span className="tweet-username">@{displayData.User?.username || 'nepoznato'}</span>
                         </Link>
                         <span className="tweet-date"> 
                             • {displayData.createdAt && !isNaN(new Date(displayData.createdAt)) 
-                                ? new Date(displayData.createdAt).toLocaleDateString() 
-                                : 'Nedavno'}
+                                ? new Date(displayData.createdAt).toLocaleDateString() : 'Nedavno'}
                         </span>
                     </div>
 
-                    <p className="tweet-text">
-                        {renderContent(displayData.content)}
-                    </p>
+                    <p className="tweet-text">{renderContent(displayData.content)}</p>
 
-                    {/* NOVO: Link Preview Card (Prikazuje se ako backend nađe link) */}
+                    {/* PORTAL LINK KARTICA */}
                     {displayData.linkUrl && (
-                        <div 
-                            className="link-preview-card"
-                            onClick={(e) => {
+                        <div className="portal-link-card" onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(displayData.linkUrl, '_blank');
-                            }}
-                            style={{
-                                border: '1px solid #cfd9de',
-                                borderRadius: '16px',
-                                overflow: 'hidden',
-                                marginTop: '12px',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f7f7f7'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                            {displayData.linkImage && (
-                                <div style={{ width: '100%', height: '200px', overflow: 'hidden' }}>
-                                    <img 
-                                        src={displayData.linkImage} 
-                                        alt="preview" 
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                    />
-                                </div>
-                            )}
-                            <div style={{ padding: '12px', borderTop: displayData.linkImage ? '1px solid #cfd9de' : 'none' }}>
-                                <div style={{ color: '#536471', fontSize: '13px' }}>
-                                    {new URL(displayData.linkUrl).hostname}
-                                </div>
-                                <div style={{ fontWeight: 'bold', fontSize: '15px', margin: '4px 0', color: '#0f1419' }}>
-                                    {displayData.linkTitle}
-                                </div>
-                                {displayData.linkDescription && (
-                                    <div style={{ color: '#536471', fontSize: '14px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                        {displayData.linkDescription}
+                            }}>
+                            <div className="portal-card-image">
+                                {displayData.linkImage ? (
+                                    <img src={displayData.linkImage} alt="portal content" />
+                                ) : (
+                                    <div className="image-fallback">
+                                        <span>{formatHostname(displayData.linkUrl)}</span>
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="portal-card-footer">
+                                <span className="portal-domain">{formatHostname(displayData.linkUrl)}</span>
+                                <h4 className="portal-title">{displayData.linkTitle || "Pročitajte više na portalu..."}</h4>
                             </div>
                         </div>
                     )}
 
-                    {displayData.image && (
+                    {displayData.image && !displayData.linkUrl && (
                         <div className="tweet-image-container">
                             <img src={displayData.image} className="tweet-image-content" alt="tweet" />
                         </div>
                     )}
 
-                    <div className="tweet-actions" style={{ marginTop: '12px', display: 'flex', gap: '20px' }}>
-                        <span className="action-btn comment-btn">
-                            💬 {displayData.Comments?.length || 0}
-                        </span>
-
-                        <span 
-                            className={`action-btn retweet-btn ${isRetweetAction ? 'active' : ''}`}
-                            onClick={handleRetweet}
-                        >
+                    <div className="tweet-actions">
+                        <span className="action-btn comment-btn">💬 {displayData.Comments?.length || 0}</span>
+                        <span className={`action-btn retweet-btn ${isRetweetAction ? 'active' : ''}`} onClick={handleRetweet}>
                             {isRetweetAction ? '🔁' : '🔃'} {displayData.retweetCount || 0}
                         </span>
-
-                        <span 
-                            className={`action-btn like-btn ${isLiked ? 'active' : ''}`}
-                            onClick={handleLike}
-                            style={{ color: isLiked ? '#f91880' : 'inherit' }}
-                        >
+                        <span className={`action-btn like-btn ${isLiked ? 'active' : ''}`} onClick={handleLike}>
                             {isLiked ? '❤️' : '🤍'} {displayData.LikedByUsers?.length || 0}
                         </span>
                     </div>
