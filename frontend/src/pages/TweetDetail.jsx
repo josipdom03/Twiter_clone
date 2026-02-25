@@ -22,7 +22,6 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
     const [showCommentLikesModal, setShowCommentLikesModal] = useState(false);
     const [commentLikesList, setCommentLikesList] = useState([]);
 
-    // Stabilna funkcija za dohvat podataka (memoizirana)
     const fetchFreshTweetData = useCallback(async () => {
         if (!initialTweet?.id) return;
         setFetchLoading(true);
@@ -43,7 +42,6 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
         if (initialTweet?.id) {
             fetchFreshTweetData();
 
-            // Slušanje socket događaja
             socket.on('user_followed', fetchFreshTweetData);
             socket.on('tweet_updated', (updatedTweetId) => {
                 if (updatedTweetId === initialTweet.id) {
@@ -64,9 +62,11 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
         navigate(`/profile/${username}`);
     };
 
+    // NADOGRAĐENO: Renderira klikabilne hashtage I linkove u tekstu
     const renderContent = (text) => {
         if (!text) return "";
-        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+)/g);
+        // Regex hvata hashtage i URL-ove
+        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+|(?:https?:\/\/|www\.)[^\s]+)/g);
         return parts.map((part, index) => {
             if (part.startsWith("#")) {
                 return (
@@ -82,6 +82,22 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                     >
                         {part}
                     </span>
+                );
+            }
+            // Dodano: Detekcija linka u tekstu
+            if (part.match(/^(https?:\/\/|www\.)/)) {
+                const cleanUrl = part.startsWith('www.') ? `https://${part}` : part;
+                return (
+                    <a 
+                        key={index} 
+                        href={cleanUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ color: '#1d9bf0', textDecoration: 'none' }}
+                    >
+                        {part}
+                    </a>
                 );
             }
             return part;
@@ -182,7 +198,7 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                 <button className="close-modal-btn" onClick={onClose} aria-label="Zatvori">&times;</button>
                 
                 <div className="modal-scroll-area">
-                    {/* Header: User info & Follow button */}
+                    {/* Header: User info */}
                     <div className="modal-tweet-header">
                         <div className="header-left" onClick={() => goToProfile(tweet.User?.username)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                             <img src={tweet.User?.avatar || '/default-avatar.png'} alt="avatar" className="modal-avatar" />
@@ -205,10 +221,43 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
                         )}
                     </div>
 
-                    {/* Body: Content & Image */}
+                    {/* Body: Content & Link Preview */}
                     <div className="modal-tweet-body">
                         <p className="modal-tweet-text">{renderContent(tweet.content)}</p>
-                        {tweet.image && (
+
+                        {/* NOVO: Link Preview Card unutar Detail Modala */}
+                        {tweet.linkUrl && (
+                            <div 
+                                className="modal-link-preview"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(tweet.linkUrl.startsWith('http') ? tweet.linkUrl : `https://${tweet.linkUrl}`, '_blank');
+                                }}
+                                style={{
+                                    border: '1px solid #cfd9de',
+                                    borderRadius: '16px',
+                                    overflow: 'hidden',
+                                    marginTop: '12px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {tweet.linkImage && (
+                                    <img src={tweet.linkImage} alt="preview" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover' }} />
+                                )}
+                                <div style={{ padding: '12px', borderTop: tweet.linkImage ? '1px solid #cfd9de' : 'none' }}>
+                                    <div style={{ color: '#536471', fontSize: '13px' }}>
+                                        {(() => {
+                                            try { return new URL(tweet.linkUrl.startsWith('http') ? tweet.linkUrl : `https://${tweet.linkUrl}`).hostname; } 
+                                            catch(e) { return 'link'; }
+                                        })()}
+                                    </div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '16px', margin: '4px 0' }}>{tweet.linkTitle}</div>
+                                    {tweet.linkDescription && <div style={{ color: '#536471', fontSize: '14px' }}>{tweet.linkDescription}</div>}
+                                </div>
+                            </div>
+                        )}
+
+                        {tweet.image && !tweet.linkUrl && (
                             <div className="modal-image-container">
                                 <img src={tweet.image} alt="Tweet content" className="modal-tweet-image" />
                             </div>

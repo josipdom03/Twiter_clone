@@ -7,19 +7,10 @@ import axios from 'axios';
 export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate }) => {
     const navigate = useNavigate();
     
-    // Logika za prebacivanje podataka
-    // Ako je tweet retweet (ima parentId), sadržaj koji gledamo je u ParentTweet (original)
     const isRetweetAction = !!tweet.parentId;
     const displayData = isRetweetAction ? tweet.ParentTweet : tweet;
-    
-    // Osoba koja je napravila retweet (vlasnik ovog specifičnog unosa u bazi)
-    // To je tweet.User, dok je displayData.User autor originalne objave
     const retweeter = isRetweetAction ? tweet.User : null;
 
-    // DEBUG: Otkomentiraj ovo ako i dalje piše "Netko" da vidiš što backend šalje
-    // console.log("Retweeter podaci:", retweeter);
-
-    // Provjera lajkova na ORIGINALNOM sadržaju
     const isLiked = displayData?.LikedByUsers?.some(u => u.id === authStore.user?.id);
 
     const handleLike = async (e) => {
@@ -56,9 +47,10 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
         }
     };
 
+    // NADOGRAĐENO: Prepoznaje i hashtage i linkove
     const renderContent = (text) => {
         if (!text) return "";
-        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+)/g);
+        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+|https?:\/\/[^\s]+)/g);
         return parts.map((part, index) => {
             if (part.startsWith("#")) {
                 return (
@@ -75,28 +67,39 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
                     </span>
                 );
             }
+            // Dodano: Detekcija URL-a u tekstu
+            if (part.match(/^https?:\/\//)) {
+                return (
+                    <a 
+                        key={index} 
+                        href={part} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ color: '#1d9bf0', textDecoration: 'none' }}
+                    >
+                        {part}
+                    </a>
+                );
+            }
             return part;
         });
     };
 
-    // Sigurnosna provjera ako podaci još nisu stigli
     if (!displayData) return <div className="tweet-item">Učitavanje...</div>;
 
     return (
         <div className="tweet-item" onClick={() => onOpen(displayData)} style={{ cursor: 'pointer' }}>
             
-            {/* Prikaz retweeter labela */}
             {isRetweetAction && (
                 <div className="retweet-upper-label" style={{ paddingLeft: '48px', color: '#536471', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' }}>
                     <span className="rt-icon">🔁</span> 
-                    {/* Poboljšana provjera imena: prvo display, pa username, pa 'Netko' */}
                     {retweeter?.displayName || (retweeter?.username ? `@${retweeter.username}` : 'Netko')} je proslijedio/la
                 </div>
             )}
 
             <div className="tweet-main-content" style={{ display: 'flex' }}>
                 <div className="tweet-avatar-placeholder" onClick={(e) => e.stopPropagation()}>
-                    {/* Avatar autora ORIGINALNOG tweeta */}
                     <Link to={`/profile/${displayData.User?.username}`}>
                         <img 
                             src={displayData.User?.avatar || '/default-avatar.png'} 
@@ -106,7 +109,7 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
                     </Link>
                 </div>
                 
-                <div className="tweet-body">
+                <div className="tweet-body" style={{ width: '100%' }}>
                     <div className="tweet-header-info">
                         <Link 
                             to={`/profile/${displayData.User?.username}`} 
@@ -116,7 +119,6 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
                             <span className="tweet-display-name">{displayData.User?.displayName || 'Korisnik'}</span>
                             <span className="tweet-username">@{displayData.User?.username || 'nepoznato'}</span>
                         </Link>
-                        {/* Popravljen datum: provjera valjanosti objekta */}
                         <span className="tweet-date"> 
                             • {displayData.createdAt && !isNaN(new Date(displayData.createdAt)) 
                                 ? new Date(displayData.createdAt).toLocaleDateString() 
@@ -127,7 +129,51 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
                     <p className="tweet-text">
                         {renderContent(displayData.content)}
                     </p>
-                    
+
+                    {/* NOVO: Link Preview Card (Prikazuje se ako backend nađe link) */}
+                    {displayData.linkUrl && (
+                        <div 
+                            className="link-preview-card"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(displayData.linkUrl, '_blank');
+                            }}
+                            style={{
+                                border: '1px solid #cfd9de',
+                                borderRadius: '16px',
+                                overflow: 'hidden',
+                                marginTop: '12px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f7f7f7'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                            {displayData.linkImage && (
+                                <div style={{ width: '100%', height: '200px', overflow: 'hidden' }}>
+                                    <img 
+                                        src={displayData.linkImage} 
+                                        alt="preview" 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                    />
+                                </div>
+                            )}
+                            <div style={{ padding: '12px', borderTop: displayData.linkImage ? '1px solid #cfd9de' : 'none' }}>
+                                <div style={{ color: '#536471', fontSize: '13px' }}>
+                                    {new URL(displayData.linkUrl).hostname}
+                                </div>
+                                <div style={{ fontWeight: 'bold', fontSize: '15px', margin: '4px 0', color: '#0f1419' }}>
+                                    {displayData.linkTitle}
+                                </div>
+                                {displayData.linkDescription && (
+                                    <div style={{ color: '#536471', fontSize: '14px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                        {displayData.linkDescription}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {displayData.image && (
                         <div className="tweet-image-container">
                             <img src={displayData.image} className="tweet-image-content" alt="tweet" />

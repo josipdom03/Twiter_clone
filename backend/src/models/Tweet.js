@@ -15,6 +15,23 @@ const Tweet = sequelize.define('Tweet', {
         allowNull: true,
         defaultValue: null
     },
+    // Polja za Link Preview (Dohvaćanje metapodataka s URL-ova)
+    linkUrl: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    linkTitle: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    linkDescription: {
+        type: DataTypes.TEXT, // TEXT jer opisi znaju biti dugi
+        allowNull: true
+    },
+    linkImage: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     // Čisto polje, bez 'references' ovdje kako bi izbjegli kružne greške
     parentId: {
         type: DataTypes.INTEGER,
@@ -34,17 +51,19 @@ const Tweet = sequelize.define('Tweet', {
     timestamps: true,
     tableName: 'tweets', 
     // Indekse je najsigurnije maknuti iz samog modela dok se baza ne inicijalizira.
-    // Sequelize će automatski indeksirati Foreign Key polja kroz asocijacije.
     indexes: [] 
 });
 
+/**
+ * Metoda za izračun popularnosti (ranking algorithm)
+ */
 Tweet.prototype.calculateScore = function() {
     // Ponderi za važnost interakcije
     const weightLikes = 2;
     const weightRetweets = 5;
     const weightComments = 1;
     
-    // Dohvaćamo brojeve (ovisi kako su ti asocijacije učitane)
+    // Dohvaćamo brojeve (ovisi o asocijacijama)
     const likes = this.LikedByUsers ? this.LikedByUsers.length : 0;
     const comments = this.Comments ? this.Comments.length : 0;
     const retweets = this.retweetCount || 0;

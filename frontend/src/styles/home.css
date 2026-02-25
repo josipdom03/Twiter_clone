@@ -68,8 +68,10 @@
     font-family: inherit;
     resize: none;
     padding: 10px 0;
-    color: #0f1419;
+    color: #0f1419 !important; /* Prisili tamnu boju */
     background: transparent;
+    position: relative;
+    z-index: 5; /* Osiguraj da je iznad pozadine, ali ispod headera */
 }
 
 .tweet-box-main textarea::placeholder {

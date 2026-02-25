@@ -1,6 +1,12 @@
 {
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
+    "got": "^14.6.6",
+    "metascraper": "^5.49.24",
+    "metascraper-description": "^5.49.24",
+    "metascraper-image": "^5.49.24",
+    "metascraper-title": "^5.49.24",
+    "metascraper-url": "^5.49.24",
     "node-cron": "^4.2.1"
   },
   "devDependencies": {

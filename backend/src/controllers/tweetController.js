@@ -1,9 +1,26 @@
 import { Tweet, User, Comment, Notification, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
+import { getLinkPreview } from '../utils/linkPreview.js';
+import multer from 'multer';
+import path from 'path';
+
+// --- MULTER KONFIGURACIJA ---
+// Definiramo gdje se spremaju slike i kako se nazivaju
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Mapa mora postojati u root-u backenda
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+// Middleware za export u route file
+export const upload = multer({ storage: storage });
 
 /**
  * POMOĆNA FUNKCIJA: Izračunava i ažurira score za specifičan tweet.
- * Formula: ((Likes * 2) + (Retweets * 3) + (Comments * 1)) / (Hours + 2)^1.8
  */
 export const updateTweetScore = async (tweetId) => {
     try {
@@ -18,18 +35,14 @@ export const updateTweetScore = async (tweetId) => {
 
         const likes = tweet.LikedByUsers?.length || 0;
         const comments = tweet.Comments?.length || 0;
-        
-        // Brojimo retvitove (tweetovi kojima je ovaj tweet parentId)
         const retweetCount = await Tweet.count({ where: { parentId: tweetId } });
 
-        // Vremenski faktor (Gravity) - score opada kako vrijeme prolazi
         const hoursSinceCreated = (Date.now() - new Date(tweet.createdAt).getTime()) / (1000 * 60 * 60);
         const gravity = 1.8;
 
         const baseScore = (likes * 2) + (retweetCount * 3) + (comments * 1);
         const newScore = baseScore / Math.pow(hoursSinceCreated + 2, gravity);
 
-        // Ažuriramo score u bazi bez okidanja hookova
         await tweet.update({ score: newScore }, { hooks: false });
     } catch (err) {
         console.error("Greška pri ažuriranju score-a:", err);
@@ -97,7 +110,6 @@ export const getAllTweets = async (req, res) => {
 
         const tweets = await Tweet.findAll({
             include: tweetIncludeSchema(currentUserId),
-            // Sortiranje po popularnosti (score), a zatim po datumu
             order: [
                 ['score', 'DESC'],
                 ['createdAt', 'DESC']
@@ -120,16 +132,50 @@ export const getAllTweets = async (req, res) => {
 
 export const createTweet = async (req, res) => {
     try {
-        const { content, image } = req.body;
+        // Multer popunjava req.body i req.files
+        const { content } = req.body;
         const authorId = req.user.id;
 
+        console.log("--- NOVI TWEET ZAHTJEV ---");
+        console.log("Tekst (req.body.content):", content);
+        console.log("Datoteke (req.files):", req.files);
+
+        // Mapiranje putanja slika
+        let imagePaths = [];
+        if (req.files && req.files.length > 0) {
+            imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+        }
+
+        // --- LINK PREVIEW LOGIKA ---
+        let previewData = {};
+        const urlRegex = /(https?:\/\/[^\s]+)/;
+        const match = content?.match(urlRegex);
+
+        if (match) {
+            const url = match[0];
+            const metadata = await getLinkPreview(url);
+            if (metadata) {
+                previewData = {
+                    linkUrl: url,
+                    linkTitle: metadata.title,
+                    linkDescription: metadata.description,
+                    linkImage: metadata.image
+                };
+            }
+        }
+
+        // Slanje u bazu - image se sprema kao JSON string polja putanja
         const newTweet = await Tweet.create({
-            content,
-            image,
+            content: content || "",
+            image: imagePaths.length > 0 ? JSON.stringify(imagePaths) : null,
             userId: authorId,
-            score: 0 // Početni score za novu objavu
+            score: 0,
+            ...previewData
         });
 
+        console.log("Tweet uspješno kreiran. ID:", newTweet.id);
+
+        // Slanje obavijesti pretplatnicima
         try {
             const subscribers = await sequelize.query(
                 `SELECT follower_id FROM follows WHERE following_id = :authorId AND notify = true`,
@@ -170,7 +216,6 @@ export const getTweetById = async (req, res) => {
         const { id } = req.params;
         const currentUserId = req.user ? req.user.id : 0;
 
-        // Osvježavamo score pri pregledu tweeta kako bi osigurali ažurnost
         await updateTweetScore(id);
 
         const tweet = await Tweet.findByPk(id, {
@@ -216,7 +261,7 @@ export const deleteTweet = async (req, res) => {
         if (!tweet) return res.status(404).json({ message: "Tweet nije pronađen" });
         
         if (tweet.userId !== req.user.id) {
-            return res.status(403).json({ message: "Nemate dopuštenje za brisanje tuđeg tweeta" });
+            return res.status(403).json({ message: "Nemate dopuštenje za brisanje" });
         }
 
         await tweet.destroy();
@@ -242,7 +287,7 @@ export const getTrends = async (req, res) => {
 
         const hashtagCounts = {};
         recentTweets.forEach(tweet => {
-            const hashtags = tweet.content?.match(/#[a-z0-9_]+/gi);
+            const hashtags = tweet.content?.match(/#[a-z0-9_ćčšžđ]+/gi);
             if (hashtags) {
                 hashtags.forEach(tag => {
                     const cleanTag = tag.toLowerCase();
@@ -318,7 +363,6 @@ export const retweetTweet = async (req, res) => {
 
         if (existingRetweet) {
             await existingRetweet.destroy();
-            // Ažuriramo score originala nakon što je retweet uklonjen
             await updateTweetScore(id);
             return res.json({ message: "Retweet uklonjen", action: "unretweet" });
         }
@@ -329,7 +373,6 @@ export const retweetTweet = async (req, res) => {
             parentId: id
         });
 
-        // Ažuriramo score originala jer je dobio novi retweet
         await updateTweetScore(id);
 
         if (originalTweet.userId !== authorId) {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTweet, getAllTweets, getTweetById, getTrends, deleteTweet,getFollowingTweets ,retweetTweet} from '../controllers/tweetController.js';
+import { createTweet, getAllTweets, getTweetById, getTrends, deleteTweet,getFollowingTweets ,retweetTweet,upload} from '../controllers/tweetController.js';
 import { authMiddleware, optionalAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -11,7 +11,7 @@ router.get('/', optionalAuth, getAllTweets);
 router.get('/following', authMiddleware, getFollowingTweets);
 
 // Putanja: POST /api/tweets (zaštićena ruta)
-router.post('/', authMiddleware, createTweet);
+router.post('/', authMiddleware, upload.array('images', 4), createTweet);
 
 // Putanja: GET /api/tweets/trends
 router.get('/trends', getTrends);

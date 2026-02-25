@@ -20,21 +20,20 @@ const Home = observer(() => {
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   
-  // Za paginaciju
+  // Paginacija
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
 
-  // NOVO: State za tabove (all = Za vas, following = Pratim)
+  // Tabovi (all = Za vas, following = Pratim)
   const [activeTab, setActiveTab] = useState('all');
   
   const observerRef = useRef();
-  const lastTweetRef = useRef();
 
   const API_BASE_URL = "http://localhost:3000";
   const TWEETS_PER_PAGE = 10;
 
-  // Funkcija za dohvaćanje objava (nadograđena za tabove)
+  // Funkcija za dohvaćanje objava
   const fetchTweets = async (pageNum = 1, append = false) => {
     try {
       if (pageNum === 1) {
@@ -43,9 +42,6 @@ const Home = observer(() => {
         setLoadingMore(true);
       }
 
-      console.log(`Dohvaćam tweets (${activeTab}) - stranica: ${pageNum}, append: ${append}`);
-      
-      // Odabir endpointa ovisno o tabu
       const endpoint = activeTab === 'following' ? '/api/tweets/following' : '/api/tweets';
       
       const res = await axios.get(
@@ -54,8 +50,6 @@ const Home = observer(() => {
           headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
         }
       );
-
-      console.log("Odgovor od servera:", res.data);
 
       let newTweets = [];
       let total = 1;
@@ -66,8 +60,6 @@ const Home = observer(() => {
       } else if (res.data.tweets) {
         newTweets = res.data.tweets;
         total = res.data.totalPages || 1;
-      } else {
-        console.warn("Nepoznat format odgovora:", res.data);
       }
       
       setTotalPages(total);
@@ -80,7 +72,6 @@ const Home = observer(() => {
       }
 
     } catch (err) {
-      if (axios.isCancel(err)) return;
       console.error("Ne mogu dohvatiti objave:", err);
     } finally {
       setLoading(false);
@@ -88,28 +79,29 @@ const Home = observer(() => {
     }
   };
 
-  // Inicijalno učitavanje i promjena taba
+  // Resetiranje na promjenu taba
   useEffect(() => {
     setPage(1);
     fetchTweets(1, false);
   }, [activeTab]);
 
-  // Intersection Observer za infinite scroll
+  // Infinite scroll
   const lastTweetCallback = useCallback((node) => {
-    if (loadingMore) return;
+    if (loading || loadingMore) return;
     if (observerRef.current) observerRef.current.disconnect();
 
     observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && hasMore && !loadingMore) {
-        const nextPage = page + 1;
-        console.log("Učitavam sljedeću stranicu:", nextPage);
-        setPage(nextPage);
-        fetchTweets(nextPage, true);
+      if (entries[0]?.isIntersecting && hasMore) {
+        setPage(prevPage => {
+          const nextPage = prevPage + 1;
+          fetchTweets(nextPage, true);
+          return nextPage;
+        });
       }
     });
 
     if (node) observerRef.current.observe(node);
-  }, [loadingMore, hasMore, page, activeTab]);
+  }, [loading, loadingMore, hasMore]);
 
   const handleOpenTweet = async (tweet) => {
     try {
@@ -125,6 +117,7 @@ const Home = observer(() => {
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files || []);
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
     if (files.length + imageFiles.length > MAX_IMAGES) {
       alert(`Maksimalno ${MAX_IMAGES} slike po objavi!`);
@@ -132,39 +125,23 @@ const Home = observer(() => {
       return;
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    const invalidType = files.some(file => !allowedTypes.includes(file.type));
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        alert(`Format ${file.name} nije dozvoljen.`);
+        continue;
+      }
+      if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+        alert(`Slika ${file.name} je veća od ${MAX_IMAGE_SIZE_MB}MB.`);
+        continue;
+      }
 
-    if (invalidType) {
-      alert("Dozvoljeni formati su: JPG, PNG, GIF, WEBP.");
-      e.target.value = '';
-      return;
-    }
-
-    const tooLarge = files.some(file => file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024);
-    if (tooLarge) {
-      alert(`Svaka slika mora biti manja od ${MAX_IMAGE_SIZE_MB}MB!`);
-      e.target.value = '';
-      return;
-    }
-
-    const totalSize = [...imageFiles, ...files].reduce((acc, file) => acc + file.size, 0);
-    if (totalSize > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
-      alert(`Ukupna veličina svih slika ne smije prelaziti ${MAX_TOTAL_SIZE_MB}MB!`);
-      e.target.value = '';
-      return;
-    }
-
-    setImageFiles(prev => [...prev, ...files]);
-
-    files.forEach(file => {
+      setImageFiles(prev => [...prev, file]);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreviews(prev => [...prev, reader.result]);
       };
       reader.readAsDataURL(file);
-    });
-
+    }
     e.target.value = '';
   };
 
@@ -175,19 +152,19 @@ const Home = observer(() => {
 
   const handlePostTweet = async () => {
     if (!tweetContent?.trim() && imageFiles.length === 0) return;
-
+    
+    // LOG PODATAKA PRIJE SLANJA
+    console.log("--- ŠALJEM OBJAVU ---");
+    console.log("Tekst:", tweetContent);
+    console.log("Slike (Files):", imageFiles);
+    
     setPostingTweet(true);
 
     try {
       const formData = new FormData();
       formData.append('content', tweetContent || '');
+      imageFiles.forEach(file => formData.append('images', file));
 
-      imageFiles.forEach((file) => {
-        formData.append('images', file);
-      });
-
-      console.log("Šaljem novi tweet...");
-      
       const response = await axios.post(
         `${API_BASE_URL}/api/tweets`,
         formData,
@@ -199,33 +176,28 @@ const Home = observer(() => {
         }
       );
 
+      console.log("Server odgovor (ID):", response.data.id);
+
+      // Dohvat punog objekta nakon objave (zbog relacija)
       const newTweetRes = await axios.get(`${API_BASE_URL}/api/tweets/${response.data.id}`, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       });
 
-      // Ako smo na "Following" tabu, a tweet nije od nekoga koga pratimo (nego naš),
-      // možda ga želimo vidjeti na vrhu, pa ga dodajemo u state.
-      setTweets((prev) => [newTweetRes.data, ...(prev || [])]);
+      setTweets(prev => [newTweetRes.data, ...prev]);
       setTweetContent('');
       setImageFiles([]);
       setImagePreviews([]);
       
-      setPage(1);
-      setHasMore(true);
-      
-      // Osvježi prvu stranicu da dobijemo točan poredak sa servera
-      fetchTweets(1, false);
-
     } catch (err) {
       console.error("Greška pri objavi:", err);
-      alert("Došlo je do greške pri objavi. Pokušaj ponovo.");
+      alert("Došlo je do greške pri objavi.");
     } finally {
       setPostingTweet(false);
     }
   };
 
   const updateLikeInState = (tweetId, isLiked) => {
-    setTweets(prev => (prev || []).map(t => {
+    setTweets(prev => prev.map(t => {
       if (t?.id === tweetId) {
         const currentLikes = t?.LikedByUsers || [];
         return {
@@ -240,7 +212,7 @@ const Home = observer(() => {
   };
 
   const handleTweetDelete = (tweetId) => {
-    setTweets(prev => (prev || []).filter(t => t?.id !== tweetId));
+    setTweets(prev => prev.filter(t => t?.id !== tweetId));
   };
 
   const refreshFeed = () => {
@@ -270,7 +242,6 @@ const Home = observer(() => {
         <h2 className="header-title">Početna</h2>
       </header>
 
-      {/* NOVO: Navigacijski tabovi */}
       <div className="feed-tabs">
         <div 
           className={`tab ${activeTab === 'all' ? 'active' : ''}`}
@@ -283,7 +254,7 @@ const Home = observer(() => {
           className={`tab ${activeTab === 'following' ? 'active' : ''}`}
           onClick={() => {
             if (!authStore.isAuthenticated) {
-              alert("Morate biti prijavljeni da biste vidjeli objave onih koje pratite.");
+              alert("Morate biti prijavljeni.");
               return;
             }
             setActiveTab('following');
@@ -305,35 +276,27 @@ const Home = observer(() => {
             } 
             alt="Avatar" 
             className="tweet-box-avatar"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/default-avatar.png";
-            }}
+            onError={(e) => { e.target.src = "/default-avatar.png"; }}
           />
           <div className="tweet-box-main">
             <textarea
               placeholder="Što se događa?"
-              value={tweetContent || ''}
+              value={tweetContent}
               onChange={(e) => setTweetContent(e.target.value)}
               rows={Math.min(5, Math.max(1, (tweetContent?.split('\n').length || 1)))}
               disabled={postingTweet}
               maxLength={280}
             />
             <div className={`char-counter ${getCharCounterClass()}`}>
-              {(tweetContent?.length || 0)}/280
+              {tweetContent.length}/280
             </div>
 
-            {imagePreviews?.length > 0 && (
+            {imagePreviews.length > 0 && (
               <div className={`image-preview-container ${imagePreviews.length > 1 ? 'grid' : ''}`}>
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="image-preview">
-                    <img src={preview} alt={`Preview ${index + 1}`} />
-                    <button 
-                      className="remove-image-btn"
-                      onClick={() => removeImage(index)}
-                      type="button"
-                      disabled={postingTweet}
-                    >
+                    <img src={preview} alt="Preview" />
+                    <button className="remove-image-btn" onClick={() => removeImage(index)} disabled={postingTweet}>
                       ×
                     </button>
                   </div>
@@ -346,31 +309,24 @@ const Home = observer(() => {
                 <label className={`image-upload-btn ${postingTweet ? 'disabled' : ''}`}>
                   <input 
                     type="file" 
-                    accept="image/jpeg,image/png,image/gif,image/webp" 
+                    accept="image/*" 
                     multiple 
-                    onChange={handleImageSelect}
-                    style={{ display: 'none' }}
+                    onChange={handleImageSelect} 
+                    style={{ display: 'none' }} 
                     disabled={postingTweet}
                   />
                   <svg viewBox="0 0 24 24" width="20" height="20">
                     <path fill="currentColor" d="M3 5.5C3 4.119 4.119 3 5.5 3h13C19.881 3 21 4.119 21 5.5v13c0 1.381-1.119 2.5-2.5 2.5h-13C4.119 21 3 19.881 3 18.5v-13zM5.5 5c-.276 0-.5.224-.5.5v9.086l3-3 3 3 5-5 3 3V5.5c0-.276-.224-.5-.5-.5h-13zM19 15.414l-3-3-5 5-3-3-3 3V18.5c0 .276.224.5.5.5h13c.276 0 .5-.224.5-.5v-3.086zM9.75 7C8.784 7 8 7.784 8 8.75s.784 1.75 1.75 1.75 1.75-.784 1.75-1.75S10.716 7 9.75 7z"/>
                   </svg>
                 </label>
-                {imageFiles.length > 0 && (
-                  <span className="image-count">{imageFiles.length}/{MAX_IMAGES}</span>
-                )}
               </div>
 
               <button 
                 className="tweet-post-btn" 
                 onClick={handlePostTweet}
-                disabled={
-                  (!tweetContent?.trim() && imageFiles.length === 0) || 
-                  postingTweet || 
-                  (tweetContent?.length || 0) > 280
-                }
+                disabled={postingTweet || (!tweetContent.trim() && imageFiles.length === 0)}
               >
-                {postingTweet ? 'Objavljivanje...' : 'Objavi'}
+                {postingTweet ? '...' : 'Objavi'}
               </button>
             </div>
           </div>
@@ -379,61 +335,27 @@ const Home = observer(() => {
 
       <div className="home-content">
         {loading ? (
-          <div className="feed-placeholder">
-            <div className="loading-spinner"></div>
-            <p>Učitavanje objava...</p>
-          </div>
+          <div className="feed-placeholder"><div className="loading-spinner"></div></div>
         ) : (
           <div className="tweets-list">
-            {!tweets || tweets.length === 0 ? (
+            {tweets.length === 0 ? (
               <div className="feed-placeholder">
-                <p>
-                  {activeTab === 'following' 
-                    ? "Još ne pratiti nikoga ili nema novih objava." 
-                    : "Još nema objava. Budi prvi koji će nešto objaviti!"}
-                </p>
+                <p>{activeTab === 'following' ? "Nema novih objava." : "Budi prvi koji će objaviti!"}</p>
               </div>
             ) : (
               <>
-                {tweets.map((tweet, index) => {
-                  if (!tweet) return null;
-                  
-                  if (tweets.length === index + 1) {
-                    return (
-                      <div ref={lastTweetCallback} key={tweet.id}>
-                        <Tweet 
-                          tweet={tweet} 
-                          onOpen={handleOpenTweet} 
-                          onLikeUpdate={updateLikeInState}
-                          onDelete={handleTweetDelete}
-                        />
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <Tweet 
-                        key={tweet.id} 
-                        tweet={tweet} 
-                        onOpen={handleOpenTweet} 
-                        onLikeUpdate={updateLikeInState}
-                        onDelete={handleTweetDelete}
-                      />
-                    );
-                  }
-                })}
-                
-                {loadingMore && (
-                  <div className="feed-placeholder loading-more">
-                    <div className="loading-spinner"></div>
-                    <p>Učitavanje još objava...</p>
+                {tweets.map((tweet, index) => (
+                  <div key={tweet.id} ref={index === tweets.length - 1 ? lastTweetCallback : null}>
+                    <Tweet 
+                      tweet={tweet} 
+                      onOpen={handleOpenTweet} 
+                      onLikeUpdate={updateLikeInState}
+                      onDelete={handleTweetDelete}
+                    />
                   </div>
-                )}
-                
-                {!hasMore && tweets.length > 0 && (
-                  <div className="feed-placeholder end-of-feed">
-                    <p>To je sve za sada 🎉</p>
-                  </div>
-                )}
+                ))}
+                {loadingMore && <div className="loading-spinner"></div>}
+                {!hasMore && tweets.length > 0 && <p className="end-of-feed">To je sve za sada 🎉</p>}
               </>
             )}
           </div>
