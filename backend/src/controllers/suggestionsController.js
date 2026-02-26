@@ -52,3 +52,30 @@ export const getSuggestions = async (req, res) => {
         res.status(500).json({ message: 'Greška na serveru', error: error.message });
     }
 };
+
+
+export const getMentionSuggestions = async (req, res) => {
+    try {
+        const { search } = req.query;
+
+        if (!search) {
+            return res.json([]);
+        }
+
+        const users = await User.findAll({
+            where: {
+                [Op.or]: [
+                    { username: { [Op.like]: `%${search}%` } },
+                    { displayName: { [Op.like]: `%${search}%` } }
+                ]
+            },
+            attributes: ['id', 'username', 'displayName', 'avatar'],
+            limit: 5 // Ne želimo previše rezultata odjednom
+        });
+
+        res.json(users);
+    } catch (error) {
+        console.error("Greška pri dohvatu prijedloga:", error);
+        res.status(500).json({ error: "Interna greška servera" });
+    }
+};

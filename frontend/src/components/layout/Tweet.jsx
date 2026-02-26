@@ -49,29 +49,63 @@ export const Tweet = observer(({ tweet, onOpen, onLikeUpdate, onRetweetUpdate })
     };
 
     const renderContent = (text) => {
-        if (!text) return "";
-        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+|https?:\/\/[^\s]+)/g);
-        return parts.map((part, index) => {
-            if (part.startsWith("#")) {
-                return (
-                    <span key={index} className="hashtag-link" 
-                        onClick={(e) => { e.stopPropagation(); navigate(`/search?q=${encodeURIComponent(part)}`); }}>
-                        {part}
-                    </span>
-                );
-            }
-            if (part.match(/^https?:\/\//)) {
-                if (displayData.linkUrl && part.trim() === displayData.linkUrl.trim()) return null;
-                return (
-                    <a key={index} href={part} target="_blank" rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()} className="content-link">
-                        {part}
-                    </a>
-                );
-            }
-            return part;
-        });
+    if (!text) return "";
+
+    // Regex koji prepoznaje:
+    // 1. @[username](id) - Format koji sprema react-mentions
+    // 2. #hashtag
+    // 3. http(s) linkove
+    const parts = text.split(/(@\[[^\]]+\]\([^)]+\)|#[a-zA-Z0-9_ćčšžđ]+|https?:\/\/[^\s]+)/g);
+
+    return parts.map((part, index) => {
+        // 1. Mentions (@[username](id))
+        if (part && part.startsWith("@[")) {
+            // Izvlačimo username iz formata @[Bryon_Stehr](Bryon_Stehr)
+            // Match vraća array gdje je prvi element ime unutar []
+            const match = part.match(/@\[([^\]]+)\]/);
+            const username = match ? match[1] : part;
+
+            return (
+                <span key={index} className="mention-link" 
+                    style={{ color: '#1d9bf0', cursor: 'pointer', fontWeight: 'bold' }}
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        navigate(`/profile/${username}`); 
+                    }}>
+                    @{username}
+                </span>
+            );
+        }
+
+        // 2. Hashtags (#hashtag)
+        if (part && part.startsWith("#")) {
+            return (
+                <span key={index} className="hashtag-link" 
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        navigate(`/search?q=${encodeURIComponent(part)}`); 
+                    }}>
+                    {part}
+                </span>
+            );
+        }
+
+        // 3. Links (http...)
+        if (part && part.match(/^https?:\/\//)) {
+            if (displayData.linkUrl && part.trim() === displayData.linkUrl.trim()) return null;
+            return (
+                <a key={index} href={part} target="_blank" rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()} className="content-link">
+                    {part}
+                </a>
+            );
+        }
+
+        // Običan tekst
+        return part;
+    });
     };
+
 
     const formatHostname = (url) => {
         try { return new URL(url).hostname.replace('www.', ''); } 

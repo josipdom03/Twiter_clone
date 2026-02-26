@@ -64,45 +64,72 @@ const TweetDetail = observer(({ tweet: initialTweet, onClose }) => {
 
     // NADOGRAĐENO: Renderira klikabilne hashtage I linkove u tekstu
     const renderContent = (text) => {
-        if (!text) return "";
-        // Regex hvata hashtage i URL-ove
-        const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+|(?:https?:\/\/|www\.)[^\s]+)/g);
-        return parts.map((part, index) => {
-            if (part.startsWith("#")) {
-                return (
-                    <span 
-                        key={index} 
-                        className="hashtag-link" 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClose();
-                            navigate(`/search?q=${encodeURIComponent(part)}`);
-                        }}
-                        style={{ color: '#1d9bf0', cursor: 'pointer', fontWeight: '500' }}
-                    >
-                        {part}
-                    </span>
-                );
-            }
-            // Dodano: Detekcija linka u tekstu
-            if (part.match(/^(https?:\/\/|www\.)/)) {
-                const cleanUrl = part.startsWith('www.') ? `https://${part}` : part;
-                return (
-                    <a 
-                        key={index} 
-                        href={cleanUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ color: '#1d9bf0', textDecoration: 'none' }}
-                    >
-                        {part}
-                    </a>
-                );
-            }
-            return part;
-        });
-    };
+    if (!text) return "";
+
+    // Regex sada hvata: 
+    // 1. Hashtage (#...)
+    // 2. Mentions (@...)
+    // 3. URL-ove (http, https, www)
+    const parts = text.split(/(#[a-zA-Z0-9_ćčšžđ]+|@[a-zA-Z0-9_]+|(?:https?:\/\/|www\.)[^\s]+)/g);
+
+    return parts.map((part, index) => {
+        // --- LOGIKA ZA MENTIONS (@username) ---
+        if (part.startsWith("@")) {
+            const username = part.substring(1); // Uklanjamo '@' da dobijemo čisti username za URL
+            return (
+                <span 
+                    key={index} 
+                    className="mention-link" 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (typeof onClose === 'function') onClose(); // Ako je u modalu, zatvori ga
+                        navigate(`/profile/${username}`);
+                    }}
+                    style={{ color: '#1d9bf0', cursor: 'pointer', fontWeight: '500' }}
+                >
+                    {part}
+                </span>
+            );
+        }
+
+        // --- LOGIKA ZA HASHTAGS (#tag) ---
+        if (part.startsWith("#")) {
+            return (
+                <span 
+                    key={index} 
+                    className="hashtag-link" 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (typeof onClose === 'function') onClose();
+                        navigate(`/search?q=${encodeURIComponent(part)}`);
+                    }}
+                    style={{ color: '#1d9bf0', cursor: 'pointer', fontWeight: '500' }}
+                >
+                    {part}
+                </span>
+            );
+        }
+
+        // --- LOGIKA ZA LINKOVE (http/www) ---
+        if (part.match(/^(https?:\/\/|www\.)/)) {
+            const cleanUrl = part.startsWith('www.') ? `https://${part}` : part;
+            return (
+                <a 
+                    key={index} 
+                    href={cleanUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ color: '#1d9bf0', textDecoration: 'none' }}
+                >
+                    {part}
+                </a>
+            );
+        }
+
+        return part;
+    });
+};
 
     const handleToggleFollow = async (userId, isCurrentlyFollowing) => {
         if (!authStore.isAuthenticated) return alert("Moraš biti prijavljen!");

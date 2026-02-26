@@ -60,18 +60,25 @@
     flex-direction: column;
 }
 
-.tweet-box-main textarea {
+/* Umjesto .tweet-box-main textarea, koristi ovo: */
+.mentions-input textarea {
+    width: 100% !important;
+    border: none !important;
+    outline: none !important;
+    font-size: 20px !important;
+    font-family: inherit !important;
+    resize: none !important;
+    padding: 10px 0 !important;
+    color: #0f1419 !important; /* Boja teksta za Light Mode */
+    background: transparent !important;
+    min-height: 50px;
+}
+
+/* Osiguraj da kontejner ne blokira klikove */
+.mentions-wrapper {
     width: 100%;
-    border: none;
-    outline: none;
-    font-size: 20px;
-    font-family: inherit;
-    resize: none;
-    padding: 10px 0;
-    color: #0f1419 !important; /* Prisili tamnu boju */
-    background: transparent;
     position: relative;
-    z-index: 5; /* Osiguraj da je iznad pozadine, ali ispod headera */
+    cursor: text;
 }
 
 .tweet-box-main textarea::placeholder {

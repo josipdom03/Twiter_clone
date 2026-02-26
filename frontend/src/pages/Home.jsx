@@ -4,11 +4,12 @@ import { authStore } from '../stores/AuthStore.jsx';
 import { Tweet } from '../components/layout/Tweet.jsx';
 import axios from 'axios';
 import TweetDetail from './TweetDetail';
+import { MentionsInput, Mention } from 'react-mentions'; // Novo: za @mention funkcionalnost
 import '../styles/home.css';
+import '../styles/mentions.css'; // Novo: kreiraj ovaj CSS file za stiliziranje popupa
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_SIZE_MB = 3;
-const MAX_TOTAL_SIZE_MB = 10;
 
 const Home = observer(() => {
   const [tweetContent, setTweetContent] = useState('');
@@ -33,22 +34,38 @@ const Home = observer(() => {
   const API_BASE_URL = "http://localhost:3000";
   const TWEETS_PER_PAGE = 10;
 
-  // Funkcija za dohvaćanje objava
+  // --- NOVO: Dohvaćanje prijedloga za tagiranje ---
+  const fetchMentionSuggestions = async (query, callback) => {
+    if (!query) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/suggestions/mentions?search=${query}`, {
+        headers: { Authorization: `Bearer ${authStore.token}` }
+      });
+      
+      // Mapiramo podatke u format koji react-mentions očekuje
+      const suggestions = res.data.map(user => ({
+        id: user.username,
+        display: user.username,
+        avatar: user.avatar,
+        displayName: user.displayName
+      }));
+      
+      callback(suggestions);
+    } catch (err) {
+      console.error("Greška pri dohvatu prijedloga:", err);
+    }
+  };
+
   const fetchTweets = async (pageNum = 1, append = false) => {
     try {
-      if (pageNum === 1) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
+      if (pageNum === 1) setLoading(true);
+      else setLoadingMore(true);
 
       const endpoint = activeTab === 'following' ? '/api/tweets/following' : '/api/tweets';
       
       const res = await axios.get(
         `${API_BASE_URL}${endpoint}?page=${pageNum}&limit=${TWEETS_PER_PAGE}`,
-        {
-          headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
-        }
+        { headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {} }
       );
 
       let newTweets = [];
@@ -65,11 +82,8 @@ const Home = observer(() => {
       setTotalPages(total);
       setHasMore(pageNum < total);
 
-      if (append) {
-        setTweets(prev => [...prev, ...newTweets]);
-      } else {
-        setTweets(newTweets);
-      }
+      if (append) setTweets(prev => [...prev, ...newTweets]);
+      else setTweets(newTweets);
 
     } catch (err) {
       console.error("Ne mogu dohvatiti objave:", err);
@@ -79,13 +93,11 @@ const Home = observer(() => {
     }
   };
 
-  // Resetiranje na promjenu taba
   useEffect(() => {
     setPage(1);
     fetchTweets(1, false);
   }, [activeTab]);
 
-  // Infinite scroll
   const lastTweetCallback = useCallback((node) => {
     if (loading || loadingMore) return;
     if (observerRef.current) observerRef.current.disconnect();
@@ -126,14 +138,8 @@ const Home = observer(() => {
     }
 
     for (const file of files) {
-      if (!allowedTypes.includes(file.type)) {
-        alert(`Format ${file.name} nije dozvoljen.`);
-        continue;
-      }
-      if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-        alert(`Slika ${file.name} je veća od ${MAX_IMAGE_SIZE_MB}MB.`);
-        continue;
-      }
+      if (!allowedTypes.includes(file.type)) continue;
+      if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) continue;
 
       setImageFiles(prev => [...prev, file]);
       const reader = new FileReader();
@@ -152,12 +158,6 @@ const Home = observer(() => {
 
   const handlePostTweet = async () => {
     if (!tweetContent?.trim() && imageFiles.length === 0) return;
-    
-    // LOG PODATAKA PRIJE SLANJA
-    console.log("--- ŠALJEM OBJAVU ---");
-    console.log("Tekst:", tweetContent);
-    console.log("Slike (Files):", imageFiles);
-    
     setPostingTweet(true);
 
     try {
@@ -168,17 +168,13 @@ const Home = observer(() => {
       const response = await axios.post(
         `${API_BASE_URL}/api/tweets`,
         formData,
-        { 
-          headers: { 
+        { headers: { 
             Authorization: `Bearer ${authStore.token}`,
             'Content-Type': 'multipart/form-data'
           } 
         }
       );
 
-      console.log("Server odgovor (ID):", response.data.id);
-
-      // Dohvat punog objekta nakon objave (zbog relacija)
       const newTweetRes = await axios.get(`${API_BASE_URL}/api/tweets/${response.data.id}`, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       });
@@ -243,23 +239,11 @@ const Home = observer(() => {
       </header>
 
       <div className="feed-tabs">
-        <div 
-          className={`tab ${activeTab === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveTab('all')}
-        >
+        <div className={`tab ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>
           <span>Za vas</span>
           <div className="tab-indicator"></div>
         </div>
-        <div 
-          className={`tab ${activeTab === 'following' ? 'active' : ''}`}
-          onClick={() => {
-            if (!authStore.isAuthenticated) {
-              alert("Morate biti prijavljeni.");
-              return;
-            }
-            setActiveTab('following');
-          }}
-        >
+        <div className={`tab ${activeTab === 'following' ? 'active' : ''}`} onClick={() => authStore.isAuthenticated ? setActiveTab('following') : alert("Morate biti prijavljeni.")}>
           <span>Pratim</span>
           <div className="tab-indicator"></div>
         </div>
@@ -269,9 +253,7 @@ const Home = observer(() => {
         <div className="tweet-box-container">
           <img 
             src={authStore.user?.avatar ? 
-              (authStore.user.avatar.startsWith('http') ? 
-                authStore.user.avatar : 
-                `${API_BASE_URL}${authStore.user.avatar}`) 
+              (authStore.user.avatar.startsWith('http') ? authStore.user.avatar : `${API_BASE_URL}${authStore.user.avatar}`) 
               : "/default-avatar.png"
             } 
             alt="Avatar" 
@@ -279,14 +261,38 @@ const Home = observer(() => {
             onError={(e) => { e.target.src = "/default-avatar.png"; }}
           />
           <div className="tweet-box-main">
-            <textarea
-              placeholder="Što se događa?"
-              value={tweetContent}
-              onChange={(e) => setTweetContent(e.target.value)}
-              rows={Math.min(5, Math.max(1, (tweetContent?.split('\n').length || 1)))}
-              disabled={postingTweet}
-              maxLength={280}
-            />
+            {/* NOVO: MentionsInput umjesto obične textaree */}
+            <div className="mentions-wrapper">
+              <MentionsInput
+                value={tweetContent}
+                onChange={(e) => setTweetContent(e.target.value)}
+                placeholder="Što se događa?"
+                className="mentions-input"
+                disabled={postingTweet}
+                maxLength={280}
+              >
+                <Mention
+                  trigger="@"
+                  data={fetchMentionSuggestions}
+                  displayTransform={(id, display) => `@${display}`}
+                  className="mentions-mention"
+                  renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => (
+                    <div className={`mention-suggestion-item ${focused ? 'focused' : ''}`}>
+                      <img 
+                        src={suggestion.avatar ? (suggestion.avatar.startsWith('http') ? suggestion.avatar : `${API_BASE_URL}${suggestion.avatar}`) : "/default-avatar.png"} 
+                        className="suggestion-avatar" 
+                        alt=""
+                      />
+                      <div className="suggestion-info">
+                        <span className="suggestion-name">{suggestion.displayName}</span>
+                        <span className="suggestion-username">@{suggestion.display}</span>
+                      </div>
+                    </div>
+                  )}
+                />
+              </MentionsInput>
+            </div>
+
             <div className={`char-counter ${getCharCounterClass()}`}>
               {tweetContent.length}/280
             </div>
@@ -296,9 +302,7 @@ const Home = observer(() => {
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="image-preview">
                     <img src={preview} alt="Preview" />
-                    <button className="remove-image-btn" onClick={() => removeImage(index)} disabled={postingTweet}>
-                      ×
-                    </button>
+                    <button className="remove-image-btn" onClick={() => removeImage(index)} disabled={postingTweet}>×</button>
                   </div>
                 ))}
               </div>
@@ -307,25 +311,13 @@ const Home = observer(() => {
             <div className="tweet-box-footer">
               <div className="tweet-actions-left">
                 <label className={`image-upload-btn ${postingTweet ? 'disabled' : ''}`}>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    multiple 
-                    onChange={handleImageSelect} 
-                    style={{ display: 'none' }} 
-                    disabled={postingTweet}
-                  />
+                  <input type="file" accept="image/*" multiple onChange={handleImageSelect} style={{ display: 'none' }} disabled={postingTweet} />
                   <svg viewBox="0 0 24 24" width="20" height="20">
                     <path fill="currentColor" d="M3 5.5C3 4.119 4.119 3 5.5 3h13C19.881 3 21 4.119 21 5.5v13c0 1.381-1.119 2.5-2.5 2.5h-13C4.119 21 3 19.881 3 18.5v-13zM5.5 5c-.276 0-.5.224-.5.5v9.086l3-3 3 3 5-5 3 3V5.5c0-.276-.224-.5-.5-.5h-13zM19 15.414l-3-3-5 5-3-3-3 3V18.5c0 .276.224.5.5.5h13c.276 0 .5-.224.5-.5v-3.086zM9.75 7C8.784 7 8 7.784 8 8.75s.784 1.75 1.75 1.75 1.75-.784 1.75-1.75S10.716 7 9.75 7z"/>
                   </svg>
                 </label>
               </div>
-
-              <button 
-                className="tweet-post-btn" 
-                onClick={handlePostTweet}
-                disabled={postingTweet || (!tweetContent.trim() && imageFiles.length === 0)}
-              >
+              <button className="tweet-post-btn" onClick={handlePostTweet} disabled={postingTweet || (!tweetContent.trim() && imageFiles.length === 0)}>
                 {postingTweet ? '...' : 'Objavi'}
               </button>
             </div>
@@ -346,12 +338,7 @@ const Home = observer(() => {
               <>
                 {tweets.map((tweet, index) => (
                   <div key={tweet.id} ref={index === tweets.length - 1 ? lastTweetCallback : null}>
-                    <Tweet 
-                      tweet={tweet} 
-                      onOpen={handleOpenTweet} 
-                      onLikeUpdate={updateLikeInState}
-                      onDelete={handleTweetDelete}
-                    />
+                    <Tweet tweet={tweet} onOpen={handleOpenTweet} onLikeUpdate={updateLikeInState} onDelete={handleTweetDelete} />
                   </div>
                 ))}
                 {loadingMore && <div className="loading-spinner"></div>}
