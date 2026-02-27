@@ -16,8 +16,8 @@ import { updateTweetScore } from './controllers/tweetController.js';
 
 dotenv.config();
 
-const app = express();
-const httpServer = createServer(app);
+export const app = express();
+export const httpServer = createServer(app);
 
 // --- SOCKET.IO KONFIGURACIJA ---
 const io = new Server(httpServer, {
@@ -145,4 +145,6 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}

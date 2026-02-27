@@ -7,7 +7,7 @@ services:
       MYSQL_DATABASE: twitter_db
       MYSQL_ROOT_PASSWORD: rootpassword
     ports:
-      - "3307:3307"
+      - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
 

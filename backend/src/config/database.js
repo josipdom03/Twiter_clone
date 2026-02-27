@@ -1,18 +1,30 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import path from 'path';
 
-// Učitaj .env varijable
-dotenv.config();
+// 1. OVO MORA BITI PRVO - prije bilo kakve upotrebe process.env
+const isTest = process.env.NODE_ENV === 'test';
+const envPath = isTest ? '.env.test' : '.env';
+
+dotenv.config({ path: path.resolve(process.cwd(), envPath) });
+
+if (isTest) {
+  console.log('--- TEST MODE DETECTED ---');
+  console.log('Loading from:', envPath);
+  console.log('DB User:', process.env.DB_USER); 
+}
+
+const dbPassword = String(process.env.DB_PASSWORD || ''); 
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
-  process.env.DB_PASSWORD,
+  dbPassword, 
   {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
     dialect: 'mysql',
-    logging: false, 
+    logging: false,
     define: {
       timestamps: true, 
       underscored: true,
@@ -26,13 +38,12 @@ const sequelize = new Sequelize(
   }
 );
 
-// Testiranje konekcije
 export const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log(' Konekcija s MySQL bazom je uspješno uspostavljena.');
+    if (!isTest) console.log('✅ Konekcija s MySQL bazom uspješna.');
   } catch (error) {
-    console.error(' Nije moguće povezati se s bazom podataka:', error);
+    console.error('❌ Greška pri spajanju:', error.message);
   }
 };
 
