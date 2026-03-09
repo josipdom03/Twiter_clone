@@ -15,6 +15,7 @@ import ChatDetail from './pages/ChatDetails';
 import Sidebar from './components/layout/Sidebar';
 import RightPanel from './components/layout/RightPanel';
 import Search from './pages/Search';
+import LoginSuccess from './pages/LoginSucces';
 
 // CSS
 import './index.css';
@@ -77,6 +78,7 @@ const App = observer(() => {
         {/* SREDNJI STUPAC - Glavni sadržaj */}
         <div className={`main-column ${!isAuthenticated ? 'full-width' : ''}`}>
           <Routes>
+            <Route path="/login-success" element={<LoginSuccess />} />
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
             <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
