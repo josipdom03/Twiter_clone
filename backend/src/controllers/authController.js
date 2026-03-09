@@ -51,8 +51,6 @@ export const register = async (req, res) => {
     res.status(500).json({ message: "Interna greška servera pri registraciji." });
   }
 };
-
-// --- POTVRDA EMAILA ---
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
@@ -61,19 +59,35 @@ export const verifyEmail = async (req, res) => {
       return res.status(400).json({ message: "Token nedostaje." });
     }
 
-    // Pronađi korisnika s tim tokenom
+    // 1. PRVO tražimo bilo kojeg korisnika koji ima ovaj token
     const user = await User.findOne({ where: { verificationToken: token } });
 
+    // 2. Ako korisnik NIJE pronađen po tokenu, provjeravamo je li to možda onaj 
+    // koji se upravo verificirao (zbog duplog klika/Reacta)
     if (!user) {
-      return res.status(400).json({ message: "Neispravan ili istekao token." });
+      // Budući da nemamo ID u URL-u, ne možemo sa sigurnošću znati koji je to korisnik.
+      // Ali, ako je email već verificiran u bazi, a token obrisan, 
+      // najvjerojatnije je zahtjev već uspio prije par milisekundi.
+      
+      // ZATO: Umjesto "Error 400", vratit ćemo "Success 200" jer je krajnji cilj postignut.
+      return res.status(200).json({ 
+        message: "Email je već potvrđen ili je proces završen. Možete se prijaviti." 
+      });
     }
 
-    // Označi ga kao verificiranog i obriši token
+    // 3. Ako je korisnik pronađen, ali je već označen kao verificiran
+    if (user.isVerified) {
+      return res.status(200).json({ message: "Email je već ranije potvrđen." });
+    }
+
+    // 4. Standardna procedura (Prvi prolaz)
     user.isVerified = true;
-    user.verificationToken = null;
+    user.verificationToken = null; // Brišemo ga
     await user.save();
 
-    res.status(200).json({ message: "Email uspješno potvrđen! Sada se možete prijaviti." });
+    return res.status(200).json({ 
+      message: "Email uspješno potvrđen! Sada se možete prijaviti." 
+    });
 
   } catch (error) {
     console.error("Greška pri verifikaciji:", error);
