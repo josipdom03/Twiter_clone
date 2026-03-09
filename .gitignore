@@ -34,4 +34,7 @@ Thumbs.db
 # --- Logovi ---
 logs
 *.log
-**/logs/
+
+
+.env
+node_modules/
