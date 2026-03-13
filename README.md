@@ -4,6 +4,7 @@
 ![Firebase](https://img.shields.io/badge/firebase-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
 ![TailwindCSS](https://img.shields.io/badge/tailwind%20css-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Vite](https://img.shields.io/badge/vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+<<<<<<< HEAD
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 
@@ -133,3 +134,6 @@ Aplikacija je izgrađena kao **Single Page Application (SPA)** koristeći `react
 1. Kloniraj repozitorij:
    ```bash
    git clone [https://github.com/josipdom03/Twiter_clone.git](https://github.com/josipdom03/Twiter_clone.git)
+=======
+![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
+>>>>>>> 9d049cb09e4585744971cbd3b5bc5ce27fb1b7d4
