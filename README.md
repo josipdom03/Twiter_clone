@@ -4,7 +4,6 @@
 ![Firebase](https://img.shields.io/badge/firebase-ffca28?style=for-the-badge&logo=firebase&logoColor=black)
 ![TailwindCSS](https://img.shields.io/badge/tailwind%20css-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Vite](https://img.shields.io/badge/vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-<<<<<<< HEAD
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 
@@ -32,6 +31,41 @@ Aplikacija replicira srž Twitter korisničkog iskustva, koristeći moderne tehn
 * **✉️ DM Komunikacija (WebSockets):** Implementiran je sustav direktnih poruka (Direct Messages) koji omogućuje instantnu komunikaciju između korisnika bez potrebe za osvježavanjem stranice.
 * **👤 Upravljanje profilima:** Svaki korisnik ima prilagodljiv profil. Sustav omogućuje posjećivanje tuđih profila, pregled njihovih objava te dinamičku interakciju.
 * **🤝 Sustav praćenja (Follow):** Korisnici mogu pratiti druge profile, što direktno utječe na sadržaj njihovog glavnog "Početna" feeda.
+
+---
+
+  <img src="Foto2.png" alt="Twitter Clone searching" width="100%">
+
+
+---
+
+## 💬 Interakcija i Komunikacija
+
+Projekt implementira kompletan ekosustav društvene interakcije, omogućujući korisnicima javnu i privatnu razmjenu informacija u stvarnom vremenu.
+
+<p align="center">
+  <img src="Kombinacija_Slika.png" alt="Twitter Clone Interakcije" width="100%">
+</p>
+
+### 1. Privatne Poruke (Direct Messages)
+Sustav za dopisivanje omogućuje izravnu, privatnu komunikaciju između korisnika:
+* **Real-time Chat:** Zahvaljujući WebSoketima, poruke se razmjenjuju trenutno bez potrebe za osvježavanjem stranice.
+* **Povijest razgovora:** Pregledan ispis poruka s vizualnim indikatorima (status slanja i primanja).
+* **Intuitivno sučelje:** Jednostavan unos poruka s fokusom na brzinu i preglednost.
+
+### 2. Javni Feed & Angažman
+Srž aplikacije je javni zid gdje se odvija glavna aktivnost:
+* **Objave (Tweets):** Korisnici dijele multimedijalni sadržaj, misli i tehničke novosti (podrška za hashtagove poput `#react` i `#coding`).
+* **Komentiranje:** Svaka objava podržava duboke razine konverzacije kroz sustav odgovora (Replies).
+* **Lajkanje:** Vizualna povratna informacija o popularnosti sadržaja kroz interaktivne gumbe za lajkanje.
+
+### 3. Sustav Praćenja i Obavijesti
+* **Follow System:** Mogućnost praćenja drugih profila kako bi se personalizirao Home feed.
+* **Pametne Notifikacije:** Korisnici dobivaju obavijesti u stvarnom vremenu za nove poruke, lajkove, komentare i nove pratitelje.
+* **Pretraga & Prijedlozi:** Integriran sustav pretrage korisnika i pametni prijedlozi za praćenje na temelju aktivnosti.
+
+---
+  <img src="Foto3.png" alt="Twitter Clone Comunication" width="100%">
 
 ---
 
@@ -134,6 +168,3 @@ Aplikacija je izgrađena kao **Single Page Application (SPA)** koristeći `react
 1. Kloniraj repozitorij:
    ```bash
    git clone [https://github.com/josipdom03/Twiter_clone.git](https://github.com/josipdom03/Twiter_clone.git)
-=======
-![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
->>>>>>> 9d049cb09e4585744971cbd3b5bc5ce27fb1b7d4
