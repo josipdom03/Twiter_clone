@@ -43,9 +43,6 @@ Aplikacija replicira srž Twitter korisničkog iskustva, koristeći moderne tehn
 
 Projekt implementira kompletan ekosustav društvene interakcije, omogućujući korisnicima javnu i privatnu razmjenu informacija u stvarnom vremenu.
 
-<p align="center">
-  <img src="Kombinacija_Slika.png" alt="Twitter Clone Interakcije" width="100%">
-</p>
 
 ### 1. Privatne Poruke (Direct Messages)
 Sustav za dopisivanje omogućuje izravnu, privatnu komunikaciju između korisnika:
@@ -165,6 +162,44 @@ Aplikacija je izgrađena kao **Single Page Application (SPA)** koristeći `react
 
 ## 🚀 Instalacija i Pokretanje
 
-1. Kloniraj repozitorij:
-   ```bash
-   git clone [https://github.com/josipdom03/Twiter_clone.git](https://github.com/josipdom03/Twiter_clone.git)
+Projekt je moguće pokrenuti lokalno koristeći Docker (preporučeno) ili ručno instalacijom ovisnosti.
+
+### 📋 Preduvjeti
+* [Node.js](https://nodejs.org/) (verzija 16.x ili novija)
+* [Docker](https://www.docker.com/) i Docker Compose
+
+### 1. Kloniranje projekta
+```bash
+git clone [https://github.com/josipdom03/Twiter_clone.git](https://github.com/josipdom03/Twiter_clone.git)
+cd Twiter_clone
+
+###2. Konfiguracija okruženja (.env)
+Prije pokretanja, osiguraj da imaš .env datoteku unutar /backend direktorija s potrebnim podacima (npr. Mailtrap, JWT secret, itd.).
+Docker će automatski povući te varijable.
+
+###3. Pokretanje putem Dockera (Preporučeno)
+Ova metoda automatski podiže MySQL bazu, Node.js API i Vite frontend.
+```bash
+docker-compose up --build
+```
+Nakon pokretanja, frontend će biti dostupan na `http://localhost:5173`, a backend API na `http://localhost:5000/api`.
+
+### 4. Ručno pokretanje (alternativa)
+Ako želiš pokrenuti aplikaciju bez Dockera, slijedi ove korake:
+#### Backend
+```bash
+cd backend
+npm install
+npm start
+```
+#### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Nakon pokretanja, frontend će biti dostupan na `http://localhost:5173`, a backend API na `http://localhost:5000/api`.
+---
+## 📝 Zaključak
+Ovaj projekt demonstrira naprednu implementaciju Twitter klona koristeći moderne web tehnologije. Integracija real-time komunikacije, kompleksnih interakcija i skalabilne arhitekture čini ovaj projekt impresivnim primjerom stručnosti u izradi web aplikacija.
+
